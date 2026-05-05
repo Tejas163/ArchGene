@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from typing import Optional
 from copy import deepcopy
 
-from core.gene_schema import Gene, ActivationType
+from src.archgene.gene_schema import Gene, ActivationType, ArchitectureFamily, QuantizationType
 
 
 @dataclass
@@ -18,10 +18,11 @@ class FitnessTargets:
     efficiency: float = 0.0    # 0-1: parameter efficiency
     stability: float = 0.0    # 0-1: training stability
     memory_fit: float = 0.0   # 0-1: fits in memory budget
+    quantization_boost: float = 0.0  # 0-1: bonus for quantized
     
     def total(self) -> float:
         return (self.capability + self.efficiency + 
-                self.stability + self.memory_fit) / 4
+                self.stability + self.memory_fit + self.quantization_boost) / 5
 
 
 def compute_multi_objective_fitness(gene_dict: dict) -> FitnessTargets:
@@ -30,7 +31,7 @@ def compute_multi_objective_fitness(gene_dict: dict) -> FitnessTargets:
     
     targets = FitnessTargets()
     
-    # Capability: larger is better
+    # Capability: larger is better, with bonuses for efficient architectures
     if gene.hidden_dim >= 768:
         targets.capability = 0.8
     elif gene.hidden_dim >= 512:
@@ -45,19 +46,34 @@ def compute_multi_objective_fitness(gene_dict: dict) -> FitnessTargets:
     elif gene.num_layers >= 4:
         targets.capability += 0.1
     
+    # Architecture family bonuses
+    if gene.arch_family == ArchitectureFamily.BITNET:
+        targets.capability += 0.3  # 1-bit matches 7B capability at smaller size
+    elif gene.arch_family == ArchitectureFamily.MAMBA:
+        targets.capability += 0.1  # SSM provides long context
+    elif gene.arch_family == ArchitectureFamily.RWKV:
+        targets.capability += 0.1  # Efficient attention
+    
     # Efficiency: parameter per capability
     params = gene.compute_params()
-    if params < 100_000_000:  # < 100M params
+    effective_params = gene.compute_effective_params()
+    
+    if gene.quant_type != QuantizationType.NONE:
+        # Quantized models are more efficient
+        targets.efficiency = 0.9
+    elif effective_params < 100_000_000:
         targets.efficiency = 0.8
-    elif params < 500_000_000:  # < 500M params
+    elif effective_params < 500_000_000:
         targets.efficiency = 0.5
     else:
         targets.efficiency = 0.2
     
     # Stability: known good configurations
-    targets.stability = 0.8  # GELU + LayerNorm is stable
+    targets.stability = 0.8
     if gene.hidden_act == ActivationType.GELU:
         targets.stability += 0.2
+    if gene.arch_family in [ArchitectureFamily.MAMBA, ArchitectureFamily.RWKV]:
+        targets.stability += 0.1  # Newer but proven
     
     # Memory fit: 8GB budget
     memory_gb = gene.compute_memory()
@@ -70,6 +86,14 @@ def compute_multi_objective_fitness(gene_dict: dict) -> FitnessTargets:
     else:
         targets.memory_fit = 0.2
     
+    # Quantization bonus (BitNet performs above its weight class)
+    if gene.quant_type == QuantizationType.BITNET_1BIT:
+        targets.quantization_boost = 0.8  # 1-bit is very efficient
+    elif gene.quant_type == QuantizationType.BITNET_2BIT:
+        targets.quantization_boost = 0.5
+    elif gene.quant_type in [QuantizationType.GPTQ, QuantizationType.AWQ]:
+        targets.quantization_boost = 0.3
+    
     return targets
 
 
@@ -77,7 +101,7 @@ def pareto_dominant(a: FitnessTargets, b: FitnessTargets) -> bool:
     """Check if a dominates b (Pareto optimal - not worse in any objective)."""
     better_in_any = False
     
-    for obj in ['capability', 'efficiency', 'stability', 'memory_fit']:
+    for obj in ['capability', 'efficiency', 'stability', 'memory_fit', 'quantization_boost']:
         av = getattr(a, obj)
         bv = getattr(b, obj)
         

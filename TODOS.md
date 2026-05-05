@@ -34,9 +34,11 @@
 | Item | Status | Notes |
 |------|--------|-------|
 | Production CI/CD pipeline | Pending | Not in scope |
-| Web UI | Deferred | Streamlit/dash for visualization |
-| API server | Deferred | REST API for remote evaluation |
+| Web UI | DONE ✓ | Streamlit web_ui.py for visualization |
+| API server | DONE ✓ | REST API with auth, rate limit, CORS |
 | Model Zoo | Deferred | Pre-trained architectures library |
+| API server tests | DONE ✓ | pytest test_api.py (13 tests) |
+| Agent system tests | DONE ✓ | pytest test_agents.py (10 tests) |
 
 ---
 

@@ -10,6 +10,7 @@ class ActivationType(Enum):
     SIGMOID = "sigmoid"
     TANH = "tanh"
     NONE = "none"
+    BITNET = "bitnet"
 
 
 class AttentionType(Enum):
@@ -17,12 +18,31 @@ class AttentionType(Enum):
     SLIDING = "sliding"
     FLASH = "flash"
     LINEAR = "linear"
+    SSM = "ssm"
+    RWKV = "rwkv"
 
 
 class PoolingType(Enum):
     CLS = "cls"
     MEAN = "mean"
     MAX = "max"
+
+
+class ArchitectureFamily(Enum):
+    TRANSFORMER = "transformer"
+    BITNET = "bitnet"
+    MAMBA = "mamba"
+    RWKV = "rwkv"
+    LINEAR = "linear"
+    HYBRID = "hybrid"
+
+
+class QuantizationType(Enum):
+    NONE = "none"
+    BITNET_1BIT = "1bit"
+    BITNET_2BIT = "2bit"
+    GPTQ = "gptq"
+    AWQ = "awq"
 
 
 @dataclass
@@ -47,6 +67,18 @@ class Gene:
     dropout: float = 0.0
     use_rope: bool = True
     use_gated_activation: bool = False
+    
+    arch_family: ArchitectureFamily = ArchitectureFamily.TRANSFORMER
+    quant_type: QuantizationType = QuantizationType.NONE
+    quant_groupsize: int = 128
+    
+    ssm_state_dim: int = 256
+    ssm_conv_kernel: int = 4
+    ssm_norms_before: bool = True
+    
+    rwkv_time_mix: bool = True
+    rwkv_layer_norm: bool = True
+    rwkv_sigmoid_softcap: float = 0.0
 
     def to_dict(self) -> dict:
         return {
@@ -70,6 +102,15 @@ class Gene:
             "dropout": self.dropout,
             "use_rope": self.use_rope,
             "use_gated_activation": self.use_gated_activation,
+            "arch_family": self.arch_family.value,
+            "quant_type": self.quant_type.value,
+            "quant_groupsize": self.quant_groupsize,
+            "ssm_state_dim": self.ssm_state_dim,
+            "ssm_conv_kernel": self.ssm_conv_kernel,
+            "ssm_norms_before": self.ssm_norms_before,
+            "rwkv_time_mix": self.rwkv_time_mix,
+            "rwkv_layer_norm": self.rwkv_layer_norm,
+            "rwkv_sigmoid_softcap": self.rwkv_sigmoid_softcap,
         }
 
     @classmethod
@@ -77,6 +118,8 @@ class Gene:
         attention_types = [AttentionType(a) for a in d.get("attention_types", ["full"])]
         hidden_act = ActivationType(d.get("hidden_act", "gelu"))
         pooling_type = PoolingType(d.get("pooling_type", "cls"))
+        arch_family = ArchitectureFamily(d.get("arch_family", "transformer"))
+        quant_type = QuantizationType(d.get("quant_type", "none"))
         
         return cls(
             vocab_dim=d.get("vocab_dim", 4096),
@@ -99,6 +142,15 @@ class Gene:
             dropout=d.get("dropout", 0.0),
             use_rope=d.get("use_rope", True),
             use_gated_activation=d.get("use_gated_activation", False),
+            arch_family=arch_family,
+            quant_type=quant_type,
+            quant_groupsize=d.get("quant_groupsize", 128),
+            ssm_state_dim=d.get("ssm_state_dim", 256),
+            ssm_conv_kernel=d.get("ssm_conv_kernel", 4),
+            ssm_norms_before=d.get("ssm_norms_before", True),
+            rwkv_time_mix=d.get("rwkv_time_mix", True),
+            rwkv_layer_norm=d.get("rwkv_layer_norm", True),
+            rwkv_sigmoid_softcap=d.get("rwkv_sigmoid_softcap", 0.0),
         )
 
     def validate(self) -> tuple[bool, list[str]]:
@@ -154,9 +206,47 @@ class Gene:
         output_params = self.hidden_dim * self.vocab_dim
         
         return embedding_params + attention_params + ffn_params + output_params
+    
+    def compute_effective_params(self) -> int:
+        """Effective parameters considering quantization.
+        
+        BitNet 1-bit: 8x fewer effective params (stored as 1 bit per weight)
+        BitNet 2-bit: 4x fewer effective params (stored as 2 bits per weight)
+        """
+        base = self.compute_params()
+        
+        if self.quant_type == QuantizationType.BITNET_1BIT:
+            return base // 8
+        elif self.quant_type == QuantizationType.BITNET_2BIT:
+            return base // 4
+        elif self.quant_type in [QuantizationType.GPTQ, QuantizationType.AWQ]:
+            return base // 4
+        return base
+    
+    def compute_vram_bits(self) -> int:
+        """Compute VRAM in bits (not bytes) for accurate BitNet comparison."""
+        base = self.compute_params()
+        bits_per_param = 16
+        
+        if self.quant_type == QuantizationType.BITNET_1BIT:
+            bits_per_param = 1
+        elif self.quant_type == QuantizationType.BITNET_2BIT:
+            bits_per_param = 2
+        elif self.quant_type == QuantizationType.GPTQ:
+            bits_per_param = 4
+        elif self.quant_type == QuantizationType.AWQ:
+            bits_per_param = 4
+        
+        return base * bits_per_param
 
     def compute_memory(self) -> int:
         param_count = self.compute_params()
         bytes_per_param = 2 if self.use_bias else 1
+        
+        if self.quant_type == QuantizationType.BITNET_1BIT:
+            bytes_per_param = 0.125
+        elif self.quant_type == QuantizationType.BITNET_2BIT:
+            bytes_per_param = 0.25
+        
         activation_memory = self.hidden_dim * self.max_position_embeddings * self.num_layers
-        return param_count * bytes_per_param + activation_memory
+        return int(param_count * bytes_per_param + activation_memory)
