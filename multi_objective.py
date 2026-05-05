@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from typing import Optional
 from copy import deepcopy
 
-from src.archgene.gene_schema import Gene, ActivationType, ArchitectureFamily, QuantizationType
+from core.gene_schema import Gene, ActivationType, ArchitectureFamily, QuantizationType
 
 
 @dataclass

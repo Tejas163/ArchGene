@@ -11,11 +11,11 @@ from threading import Lock
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from src.archgene.gene_schema import Gene, ActivationType, AttentionType, PoolingType
-from src.archgene.verifier import Verifier
-from src.archgene.evaluation import Evaluator
-from src.archgene.visualization import ArchitectureVisualizer
-from src.archgene.exporter import Exporter
+from core.gene_schema import Gene, ActivationType, AttentionType, PoolingType
+from core.verifier import Verifier
+from core.evaluation import Evaluator
+from core.visualization import ArchitectureVisualizer
+from core.exporter import Exporter
 
 app = FastAPI(title="ArchGene API")
 

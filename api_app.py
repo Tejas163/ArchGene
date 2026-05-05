@@ -7,11 +7,11 @@ import os
 import time
 from collections import defaultdict
 
-from src.archgene.gene_schema import Gene
-from src.archgene.model_zoo import ModelZoo
-from src.archgene.cost_estimator import CostEstimator
-from src.archgene.benchmark_integration import BenchmarkIntegration
-from src.archgene.verifier import Verifier
+from core.gene_schema import Gene
+from core.model_zoo import ModelZoo
+from core.cost_estimator import CostEstimator
+from core.benchmark_integration import BenchmarkIntegration
+from core.verifier import Verifier
 
 
 app = FastAPI(

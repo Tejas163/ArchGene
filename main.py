@@ -20,17 +20,17 @@ if sys.platform == "win32":
 
 __version__ = "0.2.0"
 
-from src.archgene.gene_schema import Gene, ActivationType
-from src.archgene.verifier import Verifier
-from src.archgene.evaluation import Evaluator, EvaluationRecord, EvaluationHistory
-from src.archgene.progress import ProgressTracker
-from src.archgene.visualization import ArchitectureVisualizer
-from src.archgene.exporter import Exporter
-from src.archgene.model_zoo import ModelZoo
-from src.archgene.cost_estimator import CostEstimator
-from src.archgene.benchmark_integration import BenchmarkIntegration
-from src.archgene.deployment import ModelDeployment
-from src.archgene.interactive_guide import run_guide
+from core.gene_schema import Gene, ActivationType
+from core.verifier import Verifier
+from core.evaluation import Evaluator, EvaluationRecord, EvaluationHistory
+from core.progress import ProgressTracker
+from core.visualization import ArchitectureVisualizer
+from core.exporter import Exporter
+from core.model_zoo import ModelZoo
+from core.cost_estimator import CostEstimator
+from core.benchmark_integration import BenchmarkIntegration
+from core.deployment import ModelDeployment
+from core.interactive_guide import run_guide
 
 
 console = Console()
