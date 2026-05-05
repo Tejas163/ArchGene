@@ -27,12 +27,13 @@
 | LLM-guided generation | DONE ✓ | Using llama3.2:1b for reasoning |
 | Crossover operator | DONE ✓ | Fixed, tested |
 | Multi-objective optimization | DONE ✓ | Pareto optimization working |
-| Archive old agents/ | Pending | Remove legacy custom agents after smolagents validated |
+| Archive old agents/ | DONE ✓ | Archived to agents/legacy_backup/ |
 
 ### Low Priority
 
 | Item | Status | Notes |
 |------|--------|-------|
+| Production CI/CD pipeline | Pending | Not in scope |
 | Web UI | Deferred | Streamlit/dash for visualization |
 | API server | Deferred | REST API for remote evaluation |
 | Model Zoo | Deferred | Pre-trained architectures library |

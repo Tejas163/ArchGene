@@ -24,6 +24,35 @@ from core.verifier import Verifier
 
 LLM_MODEL = "llama3.2:1b"
 OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+_llm_available = None
+
+
+def is_llm_available() -> bool:
+    """Check if Ollama is running and responsive."""
+    global _llm_available
+    if _llm_available is not None:
+        return _llm_available
+    try:
+        response = requests.get(f"{OLLAMA_BASE_URL}/api/tags", timeout=5)
+        _llm_available = response.status_code == 200
+    except Exception:
+        _llm_available = False
+    return _llm_available
+
+
+def call_llm_fallback(prompt: str, system_prompt: str = None) -> str:
+    """Fallback LLM call when Ollama unavailable - returns a default reasoning response."""
+    return f"[Fallback mode] Would analyze: {prompt[:100]}..."
+
+
+def safe_call_llm(prompt: str, system_prompt: str = None) -> str:
+    """Call Ollama with circuit breaker - falls back if unavailable."""
+    if is_llm_available():
+        try:
+            return call_llm(prompt, system_prompt)
+        except RuntimeError:
+            pass
+    return call_llm_fallback(prompt, system_prompt)
 
 
 def get_llm():
@@ -32,19 +61,26 @@ def get_llm():
 
 
 def call_llm(prompt: str, system_prompt: str = None) -> str:
-    """Call Ollama LLM directly."""
+    """Call Ollama LLM directly with error handling."""
     messages = []
     if system_prompt:
         messages.append({"role": "system", "content": system_prompt})
     messages.append({"role": "user", "content": prompt})
     
-    response = requests.post(
-        f"{OLLAMA_BASE_URL}/api/chat",
-        json={"model": LLM_MODEL, "messages": messages, "stream": False},
-        timeout=60,
-    )
-    response.raise_for_status()
-    return response.json()["message"]["content"]
+    try:
+        response = requests.post(
+            f"{OLLAMA_BASE_URL}/api/chat",
+            json={"model": LLM_MODEL, "messages": messages, "stream": False},
+            timeout=60,
+        )
+        response.raise_for_status()
+        return response.json()["message"]["content"]
+    except requests.exceptions.ConnectionError as e:
+        raise RuntimeError(f"Ollama not reachable at {OLLAMA_BASE_URL}: {e}")
+    except requests.exceptions.Timeout as e:
+        raise RuntimeError(f"Ollama request timed out after 60s: {e}")
+    except requests.exceptions.HTTPError as e:
+        raise RuntimeError(f"Ollama HTTP error: {e}")
 
 
 # ============================================================================
