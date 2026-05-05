@@ -1,0 +1,29 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: lint
+  labels:
+    app.kubernetes.io/version: "0.1.0"
+spec:
+  params:
+    - name: package
+      description: Python package to lint
+      default: .
+  workspaces:
+    - name: source
+  steps:
+    - name: pylint
+      image: python:3.12-slim
+      workingDir: $(workspaces.source.path)
+      script: |
+        #!/bin/bash
+        set -e
+        pip install pylint py_compile
+        python -m py_compile main.py
+        python -m py_compile core/gene_schema.py
+        python -m py_compile core/verifier.py
+        python -m py_compile core/evaluation.py
+        python -m py_compile core/progress.py
+        python -m py_compile core/visualization.py
+        python -m py_compile core/exporter.py
+        echo "Lint passed"

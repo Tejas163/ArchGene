@@ -1,0 +1,34 @@
+apiVersion: tekton.dev/v1beta1
+kind: Pipeline
+metadata:
+  name: archgene-ci
+  labels:
+    app.kubernetes.io/version: "0.1.0"
+spec:
+  workspaces:
+    - name: source
+  tasks:
+    - name: lint
+      taskRef:
+        name: lint
+      workspaces:
+        - name: source
+          workspace: source
+    
+    - name: test
+      taskRef:
+        name: test
+      workspaces:
+        - name: source
+          workspace: source
+      runAfter:
+        - lint
+    
+    - name: cli-test
+      taskRef:
+        name: cli-test
+      workspaces:
+        - name: source
+          workspace: source
+      runAfter:
+        - test

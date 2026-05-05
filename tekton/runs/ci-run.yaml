@@ -1,0 +1,23 @@
+apiVersion: tekton.dev/v1beta1
+kind: PipelineRun
+metadata:
+  name: archgene-ci-run
+  labels:
+    app.kubernetes.io/version: "0.1.0"
+spec:
+  pipelineRef:
+    name: archgene-ci
+  workspaces:
+    - name: source
+      volumeClaimTemplate:
+        metadata:
+          creationTimestamp: null
+        spec:
+          resources:
+            - name: archgene-source
+              resourceSpec:
+                storage: 1Gi
+        status: {}
+  params:
+    - name: package
+      value: .
