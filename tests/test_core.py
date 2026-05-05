@@ -30,6 +30,12 @@ class TestGeneSchema:
         assert not is_valid
         assert any("divisible" in e for e in errors)
 
+    def test_gene_validation_invalid_intermediate_size(self):
+        gene = Gene(intermediate_size=0)
+        is_valid, errors = gene.validate()
+        assert not is_valid
+        assert any("intermediate" in e.lower() for e in errors)
+
     def test_gene_to_dict(self):
         gene = Gene()
         d = gene.to_dict()

@@ -102,6 +102,13 @@ class Gene:
         )
 
     def validate(self) -> tuple[bool, list[str]]:
+        """Validate this gene instance.
+        
+        Note: This checks the current instance values. For Z3 satisfiability checking
+        (证明存在 valid 解决方案), use Verifier instead. These serve different purposes:
+        - Gene.validate(): assert current instance is valid (fast)
+        - Verifier.check_wellformedness(): prove valid solution exists (thorough)
+        """
         errors = []
         
         if self.vocab_dim <= 0:
