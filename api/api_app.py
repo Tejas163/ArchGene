@@ -29,9 +29,9 @@ max_requests = 100
 
 def verify_api_key(api_key: str = Security(API_KEY_HEADER)):
     """Verify API key from header."""
-    valid_key = os.environ.get("ARCHGENE_API_KEY", "")
+    valid_key = os.environ.get("ARCHGENE_API_KEY")
     if not valid_key:
-        valid_key = os.environ.get("ARCHGENE_INTERNAL_KEY", "archgene-internal")
+        raise HTTPException(status_code=500, detail="API not configured - set ARCHGENE_API_KEY environment variable")
     
     if api_key != valid_key:
         raise HTTPException(status_code=401, detail="Invalid API key")
