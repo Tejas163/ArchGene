@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ArchGene — LLM Architecture Evaluation</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Playfair+Display:wght@500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --navy: #1A2B4C;
+            --navy-light: #2C3E5C;
+            --gold: #C9A227;
+            --gold-light: #D4B84A;
+            --cream: #FDFBF7;
+            --white: #FFFFFF;
+            --gray-100: #F5F5F5;
+            --gray-200: #E8E8E8;
+            --gray-500: #888888;
+            --gray-700: #444444;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            color: var(--gray-700);
+            line-height: 1.6;
+            background: var(--cream);
+        }
+
+        h1, h2, h3, h4 {
+            font-family: 'Playfair Display', Georgia, serif;
+            color: var(--navy);
+            font-weight: 600;
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 0 24px;
+        }
+
+        /* Header */
+        header {
+            background: var(--white);
+            border-bottom: 1px solid var(--gray-200);
+            padding: 20px 0;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        header .container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-family: 'Playfair Display', serif;
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--navy);
+            text-decoration: none;
+            letter-spacing: -0.5px;
+        }
+
+        nav a {
+            color: var(--gray-700);
+            text-decoration: none;
+            margin-left: 32px;
+            font-size: 14px;
+            font-weight: 500;
+            transition: color 0.2s;
+        }
+
+        nav a:hover {
+            color: var(--navy);
+        }
+
+        nav a.cta {
+            background: var(--navy);
+            color: var(--white);
+            padding: 10px 20px;
+            border-radius: 4px;
+            margin-left: 24px;
+        }
+
+        nav a.cta:hover {
+            background: var(--navy-light);
+        }
+
+        /* Hero */
+        .hero {
+            padding: 100px 0 80px;
+            text-align: center;
+            background: linear-gradient(180deg, var(--white) 0%, var(--cream) 100%);
+        }
+
+        .hero h1 {
+            font-size: 52px;
+            line-height: 1.15;
+            margin-bottom: 24px;
+            letter-spacing: -1px;
+        }
+
+        .hero .subtitle {
+            font-size: 20px;
+            color: var(--gray-500);
+            max-width: 560px;
+            margin: 0 auto 40px;
+        }
+
+        .hero .cta-button {
+            display: inline-block;
+            background: var(--gold);
+            color: var(--white);
+            font-size: 16px;
+            font-weight: 600;
+            padding: 16px 40px;
+            border-radius: 4px;
+            text-decoration: none;
+            transition: all 0.2s;
+            border: none;
+            cursor: pointer;
+        }
+
+        .hero .cta-button:hover {
+            background: var(--gold-light);
+            transform: translateY(-1px);
+        }
+
+        .hero .note {
+            font-size: 13px;
+            color: var(--gray-500);
+            margin-top: 16px;
+        }
+
+        /* Section */
+        .section {
+            padding: 80px 0;
+        }
+
+        .section-header {
+            text-align: center;
+            margin-bottom: 48px;
+        }
+
+        .section-header h2 {
+            font-size: 36px;
+            margin-bottom: 16px;
+        }
+
+        .section-header p {
+            font-size: 18px;
+            color: var(--gray-500);
+            max-width: 500px;
+            margin: 0 auto;
+        }
+
+        /* Problem */
+        .problem {
+            background: var(--navy);
+            color: var(--white);
+            padding: 80px 0;
+        }
+
+        .problem h2 {
+            color: var(--white);
+            margin-bottom: 24px;
+        }
+
+        .problem p {
+            font-size: 18px;
+            opacity: 0.9;
+            max-width: 600px;
+            line-height: 1.7;
+        }
+
+        .problem .highlight {
+            color: var(--gold);
+            font-weight: 600;
+        }
+
+        /* Process */
+        .process-steps {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 40px;
+            margin-top: 48px;
+        }
+
+        .step {
+            text-align: center;
+        }
+
+        .step-number {
+            width: 48px;
+            height: 48px;
+            background: var(--gold);
+            color: var(--white);
+            font-family: 'Playfair Display', serif;
+            font-size: 24px;
+            font-weight: 600;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+        }
+
+        .step h3 {
+            font-size: 18px;
+            margin-bottom: 12px;
+        }
+
+        .step p {
+            font-size: 14px;
+            color: var(--gray-500);
+        }
+
+        /* Pricing */
+        .pricing-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 24px;
+            margin-top: 48px;
+        }
+
+        .pricing-card {
+            background: var(--white);
+            border: 1px solid var(--gray-200);
+            border-radius: 8px;
+            padding: 32px;
+            text-align: center;
+            transition: all 0.2s;
+        }
+
+        .pricing-card:hover {
+            border-color: var(--gold);
+            box-shadow: 0 8px 32px rgba(26, 43, 76, 0.08);
+        }
+
+        .pricing-card.featured {
+            border-color: var(--gold);
+            position: relative;
+        }
+
+        .pricing-card.featured::before {
+            content: "Most Popular";
+            position: absolute;
+            top: -12px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--gold);
+            color: var(--white);
+            font-size: 12px;
+            font-weight: 600;
+            padding: 4px 16px;
+            border-radius: 12px;
+        }
+
+        .pricing-card h3 {
+            font-size: 24px;
+            margin-bottom: 8px;
+        }
+
+        .pricing-card .price {
+            font-family: 'Playfair Display', serif;
+            font-size: 42px;
+            font-weight: 700;
+            color: var(--navy);
+            margin: 16px 0;
+        }
+
+        .pricing-card .price span {
+            font-size: 16px;
+            font-weight: 400;
+            color: var(--gray-500);
+        }
+
+        .pricing-card ul {
+            list-style: none;
+            text-align: left;
+            margin: 24px 0;
+        }
+
+        .pricing-card li {
+            font-size: 14px;
+            padding: 8px 0;
+            border-bottom: 1px solid var(--gray-100);
+            display: flex;
+            align-items: center;
+        }
+
+        .pricing-card li::before {
+            content: "✓";
+            color: var(--gold);
+            margin-right: 12px;
+            font-weight: 600;
+        }
+
+        .pricing-card .button {
+            display: block;
+            width: 100%;
+            padding: 14px;
+            border-radius: 4px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+
+        .pricing-card .button-primary {
+            background: var(--gold);
+            color: var(--white);
+        }
+
+        .pricing-card .button-primary:hover {
+            background: var(--gold-light);
+        }
+
+        .pricing-card .button-secondary {
+            background: var(--gray-100);
+            color: var(--navy);
+        }
+
+        .pricing-card .button-secondary:hover {
+            background: var(--gray-200);
+        }
+
+        /* About */
+        .about {
+            background: var(--white);
+        }
+
+        .about-grid {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 48px;
+            align-items: center;
+        }
+
+        .about-image {
+            width: 100%;
+            aspect-ratio: 1;
+            background: var(--gray-100);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--gray-500);
+            font-size: 14px;
+        }
+
+        .about-content h2 {
+            font-size: 32px;
+            margin-bottom: 20px;
+        }
+
+        .about-content p {
+            font-size: 16px;
+            margin-bottom: 16px;
+        }
+
+        /* Footer */
+        footer {
+            background: var(--navy);
+            color: var(--white);
+            padding: 48px 0;
+            text-align: center;
+        }
+
+        footer a {
+            color: var(--white);
+            opacity: 0.8;
+            text-decoration: none;
+        }
+
+        footer a:hover {
+            opacity: 1;
+        }
+
+        footer p {
+            font-size: 14px;
+            opacity: 0.7;
+            margin-top: 16px;
+        }
+
+        /* Services Page */
+        .services-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 24px;
+        }
+
+        .service-card {
+            background: var(--white);
+            border: 1px solid var(--gray-200);
+            border-radius: 8px;
+            padding: 32px;
+        }
+
+        .service-card h3 {
+            font-size: 20px;
+            margin-bottom: 12px;
+        }
+
+        .service-card .duration {
+            font-size: 13px;
+            color: var(--gray-500);
+            margin-bottom: 16px;
+        }
+
+        .service-card ul {
+            list-style: none;
+            margin: 20px 0;
+        }
+
+        .service-card li {
+            font-size: 14px;
+            padding: 8px 0;
+            border-bottom: 1px solid var(--gray-100);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .hero h1 {
+                font-size: 36px;
+            }
+
+            .process-steps,
+            .pricing-grid,
+            .services-grid {
+                grid-template-columns: 1fr;
+                gap: 32px;
+            }
+
+            .about-grid {
+                grid-template-columns: 1fr;
+            }
+
+            nav {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header>
+        <div class="container">
+            <a href="index.html" class="logo">ArchGene</a>
+            <nav>
+                <a href="services.html">Services</a>
+                <a href="pricing.html">Pricing</a>
+                <a href="#contact" class="cta">Book a Call</a>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Hero -->
+    <section class="hero">
+        <div class="container">
+            <h1>I Evaluate Your LLM Architecture<br>Before You Spend $50K</h1>
+            <p class="subtitle">Formal verification + cost analysis to prevent costly training failures. Get expert guidance on your transformer architecture before training.</p>
+            <a href="mailto:tejaskrshna@gmail.com" class="cta-button">Book a Consultation</a>
+            <p class="note">Typically responds within 24 hours</p>
+        </div>
+    </section>
+
+    <!-- Problem -->
+    <section class="problem">
+        <div class="container">
+            <div>
+                <h2>The Problem</h2>
+                <p>Companies routinely spend <span class="highlight">$50,000+</span> training LLM architectures that fail due to architecture misconfiguration — hidden dimension misalignments, attention mechanism incompatibilities, or simply wrong architecture family for their use case.</p>
+                <p style="margin-top: 20px;">ArchGene catches these issues <strong>before</strong> you spend a single dollar on compute.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Process -->
+    <section class="section">
+        <div class="container">
+            <div class="section-header">
+                <h2>The Process</h2>
+                <p>Straightforward evaluation in three steps</p>
+            </div>
+            <div class="process-steps">
+                <div class="step">
+                    <div class="step-number">1</div>
+                    <h3>Share Your Specs</h3>
+                    <p>Send your architecture specifications — layer count, hidden dimensions, attention type, and use case.</p>
+                </div>
+                <div class="step">
+                    <div class="step-number">2</div>
+                    <h3>I Run Analysis</h3>
+                    <p>Formal Z3 verification + cost estimation + benchmark projections using ArchGene tooling.</p>
+                </div>
+                <div class="step">
+                    <div class="step-number">3</div>
+                    <h3>You Get Report</h3>
+                    <p>Detailed report with pass/fail verification, cost breakdown, and architecture recommendations.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Services Preview -->
+    <section class="section" style="background: var(--white);">
+        <div class="container">
+            <div class="section-header">
+                <h2>What I Evaluate</h2>
+                <p>Comprehensive architecture analysis using formal methods</p>
+            </div>
+            <div class="services-grid">
+                <div class="service-card">
+                    <h3>Formal Verification</h3>
+                    <p class="duration">Z3 theorem proving</p>
+                    <ul>
+                        <li>Hidden dimension divisibility</li>
+                        <li>Attention head compatibility</li>
+                        <li>Position encoding validity</li>
+                        <li>FFN dimension constraints</li>
+                    </ul>
+                </div>
+                <div class="service-card">
+                    <h3>Cost Estimation</h3>
+                    <p class="duration">GPU + training costs</p>
+                    <ul>
+                        <li>VRAM requirements</li>
+                        <li>Training time projection</li>
+                        <li>Per-token inference latency</li>
+                        <li>Multi-GPU scaling analysis</li>
+                    </ul>
+                </div>
+                <div class="service-card">
+                    <h3>Benchmark Projections</h3>
+                    <p class="duration">Expected performance</p>
+                    <ul>
+                        <li>MMLU score estimates</li>
+                        <li>HumanEval predictions</li>
+                        <li>Architecture family fit</li>
+                        <li>Tokenization efficiency</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Pricing Preview -->
+    <section class="section">
+        <div class="container">
+            <div class="section-header">
+                <h2>Pricing</h2>
+                <p>Straightforward packages for every stage</p>
+            </div>
+            <div class="pricing-grid">
+                <div class="pricing-card">
+                    <h3>Solo</h3>
+                    <div class="price">$500<span>/project</span></div>
+                    <ul>
+                        <li>Architecture verification</li>
+                        <li>Cost breakdown</li>
+                        <li>1-hour call</li>
+                        <li>Written report</li>
+                    </ul>
+                    <a href="mailto:tejaskrshna@gmail.com?subject=ArchGene Solo" class="button button-secondary">Get Started</a>
+                </div>
+                <div class="pricing-card featured">
+                    <h3>Pro</h3>
+                    <div class="price">$1,000<span>/project</span></div>
+                    <ul>
+                        <li>Full verification + analysis</li>
+                        <li>Cost breakdown</li>
+                        <li>2-hour deep dive call</li>
+                        <li>Recommendations report</li>
+                        <li>Architecture alternatives</li>
+                    </ul>
+                    <a href="mailto:tejaskrshna@gmail.com?subject=ArchGene Pro" class="button button-primary">Get Started</a>
+                </div>
+                <div class="pricing-card">
+                    <h3>Team</h3>
+                    <div class="price">$2,000<span>/project</span></div>
+                    <ul>
+                        <li>Everything in Pro</li>
+                        <li>4-hour engagement</li>
+                        <li>Deployment guide</li>
+                        <li>Team training session</li>
+                        <li>90-day email support</li>
+                    </ul>
+                    <a href="mailto:tejaskrshna@gmail.com?subject=ArchGene Team" class="button button-secondary">Get Started</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- About -->
+    <section class="section about">
+        <div class="container">
+            <div class="about-grid">
+                <div class="about-image">
+                    <!-- Placeholder for your photo -->
+                    [Your Photo Here]
+                </div>
+                <div class="about-content">
+                    <h2>About ArchGene</h2>
+                    <p>ArchGene started as a tool I built to solve my own problem — evaluating transformer architectures before committing to training. What began as a verification script grew into a formal system with Z3 theorem proving.</p>
+                    <p>Now I help companies avoid the same mistakes I made. Each evaluation uses the same tooling that powers my own architecture decisions.</p>
+                    <p>Published on PyPI with 1,000+ downloads. Available as open source or consulting engagement.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer id="contact">
+        <div class="container">
+            <a href="mailto:tejaskrshna@gmail.com" class="logo" style="color: white; display: block; margin-bottom: 16px;">ArchGene</a>
+            <div>
+                <a href="mailto:tejaskrshna@gmail.com">tejaskrshna@gmail.com</a>
+            </div>
+            <p>© 2026 ArchGene. All rights reserved.</p>
+        </div>
+    </footer>
+</body>
+</html>
