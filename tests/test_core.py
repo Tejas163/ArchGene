@@ -5,9 +5,9 @@ from pathlib import Path
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from core.gene_schema import Gene, ActivationType, AttentionType, PoolingType
-from core.verifier import Verifier
-from core.evaluation import Evaluator
+from src.archgene.gene_schema import Gene, ActivationType, AttentionType, PoolingType
+from src.archgene.verifier import Verifier
+from src.archgene.evaluation import Evaluator
 
 
 class TestGeneSchema:
@@ -91,7 +91,7 @@ class TestEvaluator:
 class TestCLI:
     def test_version_command(self):
         from click.testing import CliRunner
-        from main import version
+        from cli.main import version
         
         runner = CliRunner()
         result = runner.invoke(version)
@@ -100,7 +100,7 @@ class TestCLI:
 
     def test_evaluate_command_help(self):
         from click.testing import CliRunner
-        from main import cli
+        from cli.main import cli
         
         runner = CliRunner()
         result = runner.invoke(cli, ["evaluate", "--help"])
@@ -109,7 +109,7 @@ class TestCLI:
     
     def test_verify_command(self):
         from click.testing import CliRunner
-        from main import cli
+        from cli.main import cli
         
         runner = CliRunner()
         result = runner.invoke(cli, ["verify"])

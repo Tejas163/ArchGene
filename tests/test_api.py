@@ -8,7 +8,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 os.environ["ARCHGENE_API_KEY"] = "test-key"
 
 from fastapi.testclient import TestClient
-from api_server import app
+from api.api_server import app
 
 
 client = TestClient(app)

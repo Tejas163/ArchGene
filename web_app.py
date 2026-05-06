@@ -5,11 +5,11 @@ import sys
 
 sys.path.insert(0, str(Path(__file__).parent))
 
-from core.gene_schema import Gene, ActivationType
-from core.model_zoo import ModelZoo
-from core.cost_estimator import CostEstimator
-from core.benchmark_integration import BenchmarkIntegration
-from core.verifier import Verifier
+from src.archgene.gene_schema import Gene, ActivationType
+from src.archgene.model_zoo import ModelZoo
+from src.archgene.cost_estimator import CostEstimator
+from src.archgene.benchmark_integration import BenchmarkIntegration
+from src.archgene.verifier import Verifier
 
 
 st.set_page_config(

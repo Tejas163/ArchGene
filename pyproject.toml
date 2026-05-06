@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "archgene"
+version = "0.2.0"
+description = "Self-healing multi-agent cognitive architecture evaluation system"
+requires-python = ">=3.10"
+dependencies = [
+    "z3-solver",
+    "smolagents",
+    "rich",
+    "click",
+    "fastapi",
+    "uvicorn",
+]
+
+[project.scripts]
+archgene = "cli.main:cli"
+
+[tool.setuptools.packages.find]
+where = ["src"]

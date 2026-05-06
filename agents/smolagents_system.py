@@ -19,8 +19,8 @@ import requests
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from core.gene_schema import Gene, ActivationType
-from core.verifier import Verifier
+from src.archgene.gene_schema import Gene, ActivationType
+from src.archgene.verifier import Verifier
 
 LLM_MODEL = "llama3.2:1b"
 OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
