@@ -340,25 +340,6 @@
             background: var(--white);
         }
 
-        .about-grid {
-            display: grid;
-            grid-template-columns: 1fr 2fr;
-            gap: 48px;
-            align-items: center;
-        }
-
-        .about-image {
-            width: 100%;
-            aspect-ratio: 1;
-            background: var(--gray-100);
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: var(--gray-500);
-            font-size: 14px;
-        }
-
         .about-content h2 {
             font-size: 32px;
             margin-bottom: 20px;
@@ -605,12 +586,7 @@
     <!-- About -->
     <section class="section about">
         <div class="container">
-            <div class="about-grid">
-                <div class="about-image">
-                    <!-- Placeholder for your photo -->
-                    [Your Photo Here]
-                </div>
-                <div class="about-content">
+            <div class="about-content">
                     <h2>About ArchGene</h2>
                     <p>ArchGene started as a tool I built to solve my own problem — evaluating transformer architectures before committing to training. What began as a verification script grew into a formal system with Z3 theorem proving.</p>
                     <p>Now I help companies avoid the same mistakes I made. Each evaluation uses the same tooling that powers my own architecture decisions.</p>
