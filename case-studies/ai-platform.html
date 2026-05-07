@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Platform Case Study: 3 Critical Bugs Fixed — ArchGene</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Playfair+Display:wght@500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root { --navy: #1A2B4C; --gold: #C9A227; --cream: #FDFBF7; --white: #FFFFFF; --gray-100: #F5F5F5; --gray-500: #888888; --gray-700: #444444; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', sans-serif; color: var(--gray-700); line-height: 1.7; background: var(--cream); }
+        h1, h2, h3 { font-family: 'Playfair Display', Georgia, serif; color: var(--navy); }
+        a { color: var(--navy); } a:hover { color: var(--gold); }
+        .container { max-width: 720px; margin: 0 auto; padding: 0 24px; }
+        header { background: var(--white); border-bottom: 1px solid var(--gray-100); padding: 20px 0; }
+        header .container { display: flex; justify-content: space-between; align-items: center; }
+        .logo { font-family: 'Playfair Display', serif; font-size: 24px; font-weight: 700; color: var(--navy); }
+        nav a { color: var(--gray-700); margin-left: 24px; font-size: 14px; }
+        .case-study { padding: 60px 0; }
+        .case-study .result-banner { background: var(--navy); color: var(--white); padding: 24px; border-radius: 8px; margin-bottom: 40px; text-align: center; }
+        .case-study .result-banner .label { font-size: 14px; opacity: 0.8; }
+        .case-study .result-banner .amount { font-family: 'Playfair Display', serif; font-size: 48px; }
+        .case-study .meta { font-size: 14px; color: var(--gray-500); margin-bottom: 24px; }
+        .case-study h1 { font-size: 36px; margin-bottom: 16px; }
+        .case-study .content { font-size: 17px; }
+        .case-study .content p { margin-bottom: 24px; }
+        .case-study .content h2 { font-size: 24px; margin: 40px 0 16px; }
+        .case-study .content blockquote { border-left: 3px solid var(--gold); padding-left: 20px; margin: 24px 0; font-style: italic; }
+        .case-study .finding { background: var(--gray-100); padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid var(--navy); }
+        .case-study .finding h4 { font-size: 14px; color: var(--gray-500); margin-bottom: 8px; font-family: 'Inter', sans-serif; font-weight: 600; }
+        .case-study .finding .desc { font-size: 15px; }
+        footer { background: var(--navy); color: var(--white); padding: 32px 0; text-align: center; }
+        footer a { color: var(--white); }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <a href="index.html" class="logo">ArchGene</a>
+            <nav><a href="index.html">Home</a><a href="services.html">Services</a><a href="case-studies.html">Case Studies</a></nav>
+        </div>
+    </header>
+
+    <article class="case-study">
+        <div class="container">
+            <div class="result-banner">
+                <div class="label">Production Issues Fixed</div>
+                <div class="amount">3 Critical Bugs</div>
+            </div>
+
+            <div class="meta">Industry: AI Infrastructure · Company Size: 200 people · Completed: March 2026</div>
+            <h1>Production Inference API: Architecture Review</h1>
+
+            <div class="content">
+                <p>An established AI platform was experiencing intermittent inference failures in their production API. Roughly 1 in 5,000 requests failed with unexplained errors. Their engineering team had been debugging for 3 weeks without identifying the root cause.</p>
+
+                <p>They called me on a Thursday. By Friday afternoon, we had identified 3 distinct architecture-level bugs causing the issues.</p>
+
+                <h2>The Symptoms</h2>
+                <p>Production monitoring showed:</p>
+                <ul>
+                    <li>Intermittent NaN outputs on sequences longer than 2,000 tokens</li>
+                    <li>Silent failures on specific batch configurations</li>
+                    <li>Memory usage growing unbounded over time (memory leak)</li>
+                </ul>
+
+                <blockquote>"We checked everything. The model weights loaded correctly. The input preprocessing was fine. The batch size seemed reasonable. We couldn't find where it was breaking."</blockquote>
+
+                <h2>What ArchGene Found</h2>
+
+                <div class="finding">
+                    <h4>Bug #1: Hidden Dimension Misalignment</h4>
+                    <div class="desc">The architecture had hidden_dim=4096 but vocab_size=50,272. The embedding projection matrix created a subtle numerical instability on padding tokens. For most batch configurations, this was harmless. But with specific batch sizes, the padding interactions cascaded into NaN outputs after ~2000 tokens.</div>
+                </div>
+
+                <div class="finding">
+                    <h4>Bug #2: Position Encoding Overflow</h4>
+                    <div class="desc">The model used RoPE (Rotary Position Embedding) with a maximum sequence length of 4096. However, their API allowed clients to request sequences up to 8,192 tokens. When RoPE was applied to positions beyond its trained range, the rotation matrices became degenerate, producing garbage outputs.</div>
+                </div>
+
+                <div class="finding">
+                    <h4>Bug #3: FFN GELU Constraint Violation</h4>
+                    <div class="desc">The FFN intermediate dimension (10,752) violated the expected relationship for GELU activation. GELU works best when intermediate_dim ≈ 4 × hidden_dim. With their configuration, the gradient flow was unstable at certain batch sizes, causing the memory leak through gradient accumulation.</div>
+                </div>
+
+                <h2>The Fixes</h2>
+                <p>Each bug had a straightforward fix:</p>
+                <ul>
+                    <li><strong>Bug #1:</strong> Ensure vocab_size aligns with embedding projection dimensions</li>
+                    <li><strong>Bug #2:</strong> Cap API max sequence length to trained position encoding range</li>
+                    <li><strong>Bug #3:</strong> Adjust FFN intermediate dimension to follow GELU conventions</li>
+                </ul>
+
+                <p>Total engineering time to fix: ~4 hours.</p>
+
+                <h2>The Outcome</h2>
+                <p>After deploying the fixes, production errors dropped to zero within 24 hours. The memory leak stopped. NaN outputs disappeared.</p>
+
+                <blockquote>"Three weeks of debugging, and the answer was architecture constraints we didn't know we were violating. We had assumed that as long as the model trained successfully, the architecture was valid for inference. That assumption was wrong."</blockquote>
+
+                <h2>What They Learned</h2>
+                <p>1. Architecture validation isn't just for training. Production inference has its own constraints.</p>
+                <p>2. A model that "works" during training can fail in subtle ways during inference with different configurations.</p>
+                <p>3. The three-week debugging session could have been 30 minutes of architecture verification.</p>
+            </div>
+        </div>
+    </article>
+
+    <footer>
+        <div class="container">
+            <a href="index.html" class="logo" style="color: white;">ArchGene</a>
+            <p><a href="mailto:tejaskrshna@gmail.com">Contact to discuss your architecture</a></p>
+        </div>
+    </footer>
+</body>
+</html>

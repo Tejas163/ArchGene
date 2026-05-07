@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Attention Mechanisms: A Practical Comparison — ArchGene Blog</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Playfair+Display:wght@500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root { --navy: #1A2B4C; --gold: #C9A227; --cream: #FDFBF7; --white: #FFFFFF; --gray-100: #F5F5F5; --gray-500: #888888; --gray-700: #444444; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', sans-serif; color: var(--gray-700); line-height: 1.7; background: var(--cream); }
+        h1, h2, h3 { font-family: 'Playfair Display', Georgia, serif; color: var(--navy); }
+        a { color: var(--navy); } a:hover { color: var(--gold); }
+        .container { max-width: 720px; margin: 0 auto; padding: 0 24px; }
+        header { background: var(--white); border-bottom: 1px solid var(--gray-100); padding: 20px 0; }
+        header .container { display: flex; justify-content: space-between; align-items: center; }
+        .logo { font-family: 'Playfair Display', serif; font-size: 24px; font-weight: 700; color: var(--navy); }
+        nav a { color: var(--gray-700); margin-left: 24px; font-size: 14px; }
+        .post { padding: 60px 0; }
+        .post .meta { font-size: 14px; color: var(--gray-500); margin-bottom: 12px; }
+        .post h1 { font-size: 38px; margin-bottom: 24px; line-height: 1.2; }
+        .post .content { font-size: 17px; }
+        .post .content p { margin-bottom: 24px; }
+        .post .content h2 { font-size: 26px; margin: 40px 0 16px; }
+        .post .content ul { margin: 0 0 24px 24px; }
+        .post .content li { margin-bottom: 8px; }
+        .post .content blockquote { border-left: 3px solid var(--gold); padding-left: 20px; margin: 24px 0; font-style: italic; color: var(--gray-500); }
+        .post .content table { width: 100%; border-collapse: collapse; margin: 24px 0; }
+        .post .content th, .post .content td { border: 1px solid var(--gray-100); padding: 12px; text-align: left; }
+        .post .content th { background: var(--gray-100); font-weight: 600; }
+        .nav-links { display: flex; justify-content: space-between; padding: 40px 0; border-top: 1px solid var(--gray-100); margin-top: 60px; }
+        .nav-links a { font-size: 14px; font-weight: 500; }
+        footer { background: var(--navy); color: var(--white); padding: 32px 0; text-align: center; }
+        footer a { color: var(--white); }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <a href="index.html" class="logo">ArchGene</a>
+            <nav><a href="index.html">Home</a><a href="services.html">Services</a><a href="blog.html">Blog</a></nav>
+        </div>
+    </header>
+
+    <article class="post">
+        <div class="container">
+            <div class="meta">February 10, 2026 · 8 min read</div>
+            <h1>Attention Mechanisms: A Practical Comparison</h1>
+            
+            <div class="content">
+                <p>Flash Attention. Linear attention. Grouped-query attention. Multi-head. Every month there's a new paper claiming to make attention "more efficient." Here's how to choose based on your actual constraints.</p>
+
+                <h2>The Standard (Multi-Head Attention)</h2>
+                <p>Standard MHA computes full pairwise attention between all tokens. Complexity: O(n²) in sequence length.</p>
+                
+                <p><strong>When to use:</strong> You need maximum quality and have the compute budget. Most production models still use this or close variants.</p>
+
+                <h2>Flash Attention</h2>
+                <p>Not a different attention mechanism—it's an implementation that computes attention without materializing the full n×n matrix. Instead, it tiles through KV cache in SRAM.</p>
+
+                <p>Speedup: 2-4x over standard attention implementations. Memory: O(n) instead of O(n²).</p>
+                
+                <p><strong>When to use:</strong> Basically always for training. If your hardware supports it (A100, H100), use it. No quality tradeoff.</p>
+
+                <table>
+                    <tr><th>Feature</th><th>Standard MHA</th><th>Flash Attention</th></tr>
+                    <tr><td>Memory (4K seq)</td><td>~1 GB</td><td>~64 MB</td></tr>
+                    <tr><td>Training speed</td><td>1x baseline</td><td>2-4x faster</td></tr>
+                    <tr><td>Quality loss</td><td>None</td><td>None</td></tr>
+                    <tr><td>Hardware</td><td>Any</td><td>A100/H100</td></tr>
+                </table>
+
+                <h2>Grouped-Query Attention (GQA)</h2>
+                <p>Used in Llama-2 70B and Mistral. Key-value heads are fewer than query heads.</p>
+                
+                <p>Llama-2 70B: 8 key-value heads, 80 query heads. Reduces KV cache by 10x while maintaining quality.</p>
+
+                <p><strong>When to use:</strong> Large models (70B+) where KV cache dominates memory. Tradeoff is minimal quality impact for massive memory savings.</p>
+
+                <h2>Multi-Query Attention (MQA)</h2>
+                <p>Extreme version of GQA: 1 key-value head. Used in Falcon and some smaller models.</p>
+                
+                <p>More aggressive memory reduction, but can hurt quality on some tasks.</p>
+
+                <h2>Linear Attention</h2>
+                <p>Changes the attention computation to O(n) instead of O(n²). Theoretical advantage for long sequences.</p>
+                
+                <p><strong>Problem:</strong> Linear attention doesn't have the same inductive biases as softmax attention. Quality often suffers, especially for tasks requiring precise token-to-token relationships.</p>
+
+                <p><strong>When to use:</strong> Very long sequences (>100K tokens) where standard attention is intractable. Models like Mamba and RetNet attempt to solve the quality problem with state space models.</p>
+
+                <h2>Sliding Window Attention</h2>
+                <p>Each token attends only to previous k tokens (e.g., Mistral's 4096 window). Combined with "spiking" to longer contexts when needed.</p>
+                
+                <p><strong>When to use:</strong> Mistral and similar architectures use this to get near-full-attention quality with reduced compute. Good for local pattern recognition tasks.</p>
+
+                <h2>How ArchGene Evaluates Attention</h2>
+                <p>We check attention mechanism compatibility with your:</p>
+                <ul>
+                    <li>Hidden dimension (some mechanisms require specific divisibility)</li>
+                    <li>Head count (GQA/MQA require specific ratios)</li>
+                    <li>Sequence length constraints</li>
+                    <li>Hardware compatibility</li>
+                </ul>
+
+                <blockquote>Example: A client had d_model=7168 with GQA, wanting 8 KV heads. Problem: 7168 isn't divisible by 8 cleanly. They needed d_model=7168 or 8×k, but also wanted to use a specific CUDA kernel that required head_dim to be a power of 2. Multiple constraints interacted in ways that weren't obvious until we modeled them.</blockquote>
+
+                <h2>Recommendations</h2>
+                <ul>
+                    <li><strong>Small models (<10B):</strong> Full MHA + Flash Attention. Memory isn't the bottleneck.</li>
+                    <li><strong>Medium models (10-70B):</strong> GQA + Flash Attention. Standard for production.</li>
+                    <li><strong>Large models (70B+):</strong> MQA or heavy GQA. KV cache dominates.</li>
+                    <li><strong>Long context (>32K):</strong> Consider sliding window or linear attention variants.</li>
+                </ul>
+
+                <h2>The Point</h2>
+                <p>Don't optimize attention until you need to. Start with Flash Attention—it's free performance. Only move to GQA/MQA when memory becomes the bottleneck. Don't use linear attention unless you have a specific long-context use case and are willing to experiment.</p>
+            </div>
+
+            <div class="nav-links">
+                <a href="blog.html">← Back to Blog</a>
+                <a href="blog.html">← Blog Index</a>
+            </div>
+        </div>
+    </article>
+
+    <footer>
+        <div class="container">
+            <a href="index.html" class="logo" style="color: white;">ArchGene</a>
+        </div>
+    </footer>
+</body>
+</html>
