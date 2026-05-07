@@ -1,6 +1,6 @@
 """ArchGene - Self-healing multi-agent cognitive architecture evaluation system."""
 
-__version__ = "0.2.0"
+__version__ = "0.3.0"
 
 from .gene_schema import Gene, ActivationType, AttentionType, PoolingType, ArchitectureFamily, QuantizationType
 from .verifier import Verifier, VerificationResult

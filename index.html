@@ -74,7 +74,7 @@
         nav a {
             color: var(--gray-700);
             text-decoration: none;
-            margin-left: 32px;
+            margin-left: 28px;
             font-size: 14px;
             font-weight: 500;
             transition: color 0.2s;
@@ -89,7 +89,7 @@
             color: var(--white);
             padding: 10px 20px;
             border-radius: 4px;
-            margin-left: 24px;
+            margin-left: 20px;
         }
 
         nav a.cta:hover {
@@ -410,8 +410,36 @@
             border-bottom: 1px solid var(--gray-100);
         }
 
+        /* Animations */
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .animate-on-scroll {
+            opacity: 0;
+        }
+        
+        .animate-on-scroll.visible {
+            animation: fadeInUp 0.6s ease forwards;
+        }
+
         /* Responsive */
         @media (max-width: 768px) {
+            nav {
+                display: none;
+            }
+            
+            .mobile-nav-toggle {
+                display: block;
+                background: none;
+                border: none;
+                font-size: 24px;
+                cursor: pointer;
+                padding: 8px;
+                color: var(--navy);
+            }
+            
             .hero h1 {
                 font-size: 36px;
             }
@@ -421,14 +449,6 @@
             .services-grid {
                 grid-template-columns: 1fr;
                 gap: 32px;
-            }
-
-            .about-grid {
-                grid-template-columns: 1fr;
-            }
-
-            nav {
-                display: none;
             }
         }
     </style>
@@ -440,9 +460,11 @@
             <a href="index.html" class="logo">ArchGene</a>
             <nav>
                 <a href="services.html">Services</a>
-                <a href="pricing.html">Pricing</a>
+                <a href="blog.html">Blog</a>
+                <a href="case-studies.html">Case Studies</a>
                 <a href="#contact" class="cta">Book a Call</a>
             </nav>
+            <button class="mobile-nav-toggle" aria-label="Toggle navigation">☰</button>
         </div>
     </header>
 
@@ -468,7 +490,7 @@
     </section>
 
     <!-- Process -->
-    <section class="section">
+    <section class="section animate-on-scroll">
         <div class="container">
             <div class="section-header">
                 <h2>The Process</h2>
@@ -495,7 +517,7 @@
     </section>
 
     <!-- Services Preview -->
-    <section class="section" style="background: var(--white);">
+    <section class="section animate-on-scroll" style="background: var(--white);">
         <div class="container">
             <div class="section-header">
                 <h2>What I Evaluate</h2>
@@ -537,7 +559,7 @@
     </section>
 
     <!-- Pricing Preview -->
-    <section class="section">
+    <section class="section animate-on-scroll">
         <div class="container">
             <div class="section-header">
                 <h2>Pricing</h2>
@@ -606,5 +628,27 @@
             <p>© 2026 ArchGene. All rights reserved.</p>
         </div>
     </footer>
+    
+    <script>
+        // Scroll animation
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                }
+            });
+        }, { threshold: 0.1 });
+        
+        document.querySelectorAll('.animate-on-scroll').forEach(el => observer.observe(el));
+        
+        // Mobile nav toggle
+        const navToggle = document.querySelector('.mobile-nav-toggle');
+        const nav = document.querySelector('header nav');
+        if (navToggle && nav) {
+            navToggle.addEventListener('click', () => {
+                nav.style.display = nav.style.display === 'block' ? '' : 'block';
+            });
+        }
+    </script>
 </body>
 </html>
