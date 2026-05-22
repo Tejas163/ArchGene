@@ -5,9 +5,9 @@ from pathlib import Path
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from src.archgene.gene_schema import Gene, ActivationType, AttentionType, PoolingType
-from src.archgene.verifier import Verifier
-from src.archgene.evaluation import Evaluator
+from archgene.gene_schema import Gene, ActivationType, AttentionType, PoolingType
+from archgene.verifier import Verifier
+from archgene.evaluation import Evaluator
 
 
 class TestGeneSchema:
@@ -104,7 +104,7 @@ class TestCLI:
         runner = CliRunner()
         result = runner.invoke(version)
         assert result.exit_code == 0
-        assert "0.4.0" in result.output
+        assert "0.4.1" in result.output
 
     def test_evaluate_command_help(self):
         from click.testing import CliRunner
@@ -126,8 +126,8 @@ class TestCLI:
 
 class TestDesignSession:
     def test_design_logic_produces_valid_gene(self):
-        from src.archgene.design_session import DesignSession
-        from src.archgene.gene_schema import Gene
+        from archgene.design_session import DesignSession
+        from archgene.gene_schema import Gene
 
         s = DesignSession()
         s.answers.use_case = "inference"
@@ -147,8 +147,8 @@ class TestDesignSession:
         assert v.is_valid
 
     def test_design_edge_case_produces_valid_gene(self):
-        from src.archgene.design_session import DesignSession
-        from src.archgene.gene_schema import Gene
+        from archgene.design_session import DesignSession
+        from archgene.gene_schema import Gene
 
         s = DesignSession()
         s.answers.use_case = "edge"
@@ -166,7 +166,7 @@ class TestDesignSession:
         assert v.is_valid
 
     def test_design_research_produces_valid_gene(self):
-        from src.archgene.design_session import DesignSession
+        from archgene.design_session import DesignSession
 
         s = DesignSession()
         s.answers.use_case = "research"
@@ -185,8 +185,8 @@ class TestDesignSession:
 
 class TestKernelGenerator:
     def test_generates_all_files(self):
-        from src.archgene.kernel_generator import KernelGenerator
-        from src.archgene.gene_schema import Gene
+        from archgene.kernel_generator import KernelGenerator
+        from archgene.gene_schema import Gene
         import shutil
 
         gene = Gene(hidden_dim=512, num_layers=2, num_heads=8)
@@ -207,8 +207,8 @@ class TestKernelGenerator:
         shutil.rmtree("test_gen_files", ignore_errors=True)
 
     def test_generated_model_is_importable(self):
-        from src.archgene.kernel_generator import KernelGenerator
-        from src.archgene.gene_schema import Gene
+        from archgene.kernel_generator import KernelGenerator
+        from archgene.gene_schema import Gene
         import sys, torch, shutil
 
         gene = Gene(hidden_dim=256, num_layers=2, num_heads=4, vocab_dim=2048)
@@ -230,8 +230,8 @@ class TestKernelGenerator:
         shutil.rmtree("test_gen_import", ignore_errors=True)
 
     def test_generated_config_matches_gene(self):
-        from src.archgene.kernel_generator import KernelGenerator
-        from src.archgene.gene_schema import Gene
+        from archgene.kernel_generator import KernelGenerator
+        from archgene.gene_schema import Gene
         import json, shutil
 
         gene = Gene(hidden_dim=768, num_layers=12, num_heads=12, vocab_dim=32000)
@@ -248,8 +248,8 @@ class TestKernelGenerator:
         shutil.rmtree("test_gen_config", ignore_errors=True)
 
     def test_generated_model_with_gqa_rope_gated_rmsnorm(self):
-        from src.archgene.kernel_generator import KernelGenerator
-        from src.archgene.gene_schema import Gene
+        from archgene.kernel_generator import KernelGenerator
+        from archgene.gene_schema import Gene
         import sys, torch, json, shutil
 
         gene = Gene(
@@ -281,8 +281,8 @@ class TestKernelGenerator:
         shutil.rmtree("test_gen_adv", ignore_errors=True)
 
     def test_generated_model_with_baseline_config(self):
-        from src.archgene.kernel_generator import KernelGenerator
-        from src.archgene.gene_schema import Gene
+        from archgene.kernel_generator import KernelGenerator
+        from archgene.gene_schema import Gene
         import sys, torch, shutil
 
         gene = Gene(

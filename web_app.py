@@ -9,8 +9,8 @@ except ImportError:
     import sys
     from pathlib import Path
     sys.path.insert(0, str(Path(__file__).parent))
-    from src.archgene.design_session import design_from_answers
-    from src.archgene.kernel_generator import KernelGenerator
+    from archgene.design_session import design_from_answers
+    from archgene.kernel_generator import KernelGenerator
 
 st.set_page_config(
     page_title="ArchGene — Design LLM Architectures",

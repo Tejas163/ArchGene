@@ -259,7 +259,7 @@ def design_for_requirements(
 ) -> Gene:
     """Design gene parameters for requirements."""
     
-    from src.archgene.gene_schema import ActivationType, AttentionType, PoolingType
+    from archgene.gene_schema import ActivationType, AttentionType, PoolingType
     
     # Base parameters from constraints
     vocab_dim = 32000

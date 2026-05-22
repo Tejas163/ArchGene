@@ -20,19 +20,19 @@ if sys.platform == "win32":
 
 __version__ = "0.4.1"
 
-from src.archgene.gene_schema import Gene, ActivationType
-from src.archgene.verifier import Verifier
-from src.archgene.evaluation import Evaluator, EvaluationRecord, EvaluationHistory
-from src.archgene.progress import ProgressTracker
-from src.archgene.visualization import ArchitectureVisualizer
-from src.archgene.exporter import Exporter
-from src.archgene.model_zoo import ModelZoo
-from src.archgene.cost_estimator import CostEstimator
-from src.archgene.benchmark_integration import BenchmarkIntegration
-from src.archgene.deployment import ModelDeployment
-from src.archgene.interactive_guide import run_guide
-from src.archgene.design_session import DesignSession
-from src.archgene.kernel_generator import KernelGenerator
+from archgene.gene_schema import Gene, ActivationType
+from archgene.verifier import Verifier
+from archgene.evaluation import Evaluator, EvaluationRecord, EvaluationHistory
+from archgene.progress import ProgressTracker
+from archgene.visualization import ArchitectureVisualizer
+from archgene.exporter import Exporter
+from archgene.model_zoo import ModelZoo
+from archgene.cost_estimator import CostEstimator
+from archgene.benchmark_integration import BenchmarkIntegration
+from archgene.deployment import ModelDeployment
+from archgene.interactive_guide import run_guide
+from archgene.design_session import DesignSession
+from archgene.kernel_generator import KernelGenerator
 
 
 console = Console()
@@ -79,7 +79,7 @@ def _offer_code_generation(gene):
     """Ask user if they want to generate code for the designed architecture."""
     from rich.prompt import Confirm
     if Confirm.ask("\nGenerate runnable PyTorch code for this architecture?"):
-        from src.archgene.kernel_generator import KernelGenerator
+        from archgene.kernel_generator import KernelGenerator
         gen = KernelGenerator()
         files = gen.generate(gene)
         console.print(f"\n[green]Generated {files.output_dir}/[/green]")
@@ -348,20 +348,136 @@ def export(format, output):
 
 
 @cli.command()
-@click.option("--top", "-t", default=10, help="Number of top architectures to show")
-def history(top):
-    """Show evaluation history."""
+@click.option("--top", "-t", default=10, help="Number of entries to show")
+@click.option("--detail", "-d", type=int, default=None, help="Show full details for entry #N")
+def history(top, detail):
+    """Show or inspect evaluation history.
+
+    Examples:
+        archgene history                  # Show last 10 entries
+        archgene history -t 5            # Show last 5 entries
+        archgene history -d 0            # Inspect most recent entry
+        archgene history -d 2            # Inspect entry #2
+    """
     hist = EvaluationHistory()
-    records = hist.get_top(top)
-    
+    records = hist.get_all()
+
     if not records:
         click.echo("No evaluation history found.")
         return
-    
+
+    if detail is not None:
+        if detail < 0 or detail >= len(records):
+            click.echo(f"[red]Entry #{detail} not found. Only {len(records)} entries.[/red]")
+            return
+        r = records[detail]
+        g = r.gene
+        console.print(Panel.fit(
+            f"[bold cyan]Entry #{detail}[/bold cyan]\n\n"
+            f"[bold]Timestamp:[/bold] {r.timestamp[:19]}\n"
+            f"[bold]Score:[/bold] {r.score:.3f}\n"
+            f"[bold]Notes:[/bold] {r.notes or '(none)'}\n\n"
+            f"[bold]Architecture:[/bold]\n"
+            f"  Hidden: {g.hidden_dim}  Layers: {g.num_layers}  Heads: {g.num_heads}\n"
+            f"  Head dim: {g.head_dim}  Intermediate: {g.intermediate_size}\n"
+            f"  Vocab: {g.vocab_dim:,}  Max pos: {g.max_position_embeddings}\n"
+            f"  Parameters: {g.compute_params():,}\n"
+            f"  Family: {g.arch_family.value}  Quant: {g.quant_type.value}\n"
+            f"  RoPE: {g.use_rope}  GQA: {g.num_kv_heads > 0}  RMSNorm: {g.use_rms_norm}",
+            border_style="cyan"
+        ))
+        return
+
     tracker.print_table("Evaluation History", [
-        {"Score": r.score, "Params": r.gene.compute_params(), "Timestamp": r.timestamp[:19]}
-        for r in records
+        {
+            "#": i,
+            "Score": f"{r.score:.2f}",
+            "Params": f"{r.gene.compute_params():,}",
+            "Hidden": r.gene.hidden_dim,
+            "Layers": r.gene.num_layers,
+            "Heads": r.gene.num_heads,
+            "Date": r.timestamp[:10],
+        }
+        for i, r in enumerate(records[:top])
     ])
+
+
+@cli.command()
+@click.argument("name1")
+@click.argument("name2", default=None, required=False)
+@click.option("--gpu", default="A100-40GB", help="GPU type for cost comparison")
+def compare(name1, name2, gpu):
+    """Compare two architectures side by side.
+
+    Accepts model zoo names (llama2_7b, mistral_7b, etc.) or
+    "last" to use the most recently evaluated architecture.
+
+    Examples:
+        archgene compare llama2_7b mistral_7b
+        archgene compare last llama2_7b       # Compare last eval with zoo model
+    """
+    def resolve(name):
+        if name == "last":
+            hist = EvaluationHistory()
+            records = hist.get_all()
+            if not records:
+                raise click.ClickException("No history found. Run 'archgene evaluate --save' first.")
+            return records[0].gene
+        try:
+            return ModelZoo.get(name)
+        except ValueError:
+            raise click.ClickException(f"Unknown model '{name}'. Use 'archgene zoo-list' to see available models.")
+
+    g1 = resolve(name1)
+    g2 = resolve(name2) if name2 else None
+
+    if not name2:
+        hist = EvaluationHistory()
+        records = hist.get_all()
+        if len(records) < 2:
+            click.echo("Need two architectures. Provide two names or one name + 'last'.")
+            return
+        g1 = records[0].gene
+        g2 = records[1].gene
+        label1 = f"Entry #0 ({records[0].timestamp[:10]})"
+        label2 = f"Entry #1 ({records[1].timestamp[:10]})"
+    else:
+        label1 = name1 if name1 != "last" else f"Latest eval"
+        label2 = name2 if name2 != "last" else f"Latest eval"
+
+    c1 = CostEstimator.full_estimate(g1, gpu=gpu)
+    c2 = CostEstimator.full_estimate(g2, gpu=gpu)
+
+    def fmt(v):
+        if isinstance(v, float):
+            return f"{v:>14.2f}"
+        if isinstance(v, int):
+            return f"{v:>14,}"
+        return f"{str(v):>14}"
+
+    sep = "-" * 60
+    click.echo(f"\n  Architecture Comparison  (GPU: {gpu})\n")
+    click.echo(f"  {'':22} {label1:>20} {label2:>20}")
+    click.echo(f"  {sep}")
+    click.echo(f"  {'Parameters':22} {fmt(g1.compute_params())} {fmt(g2.compute_params())}")
+    click.echo(f"  {'Hidden dim':22} {fmt(g1.hidden_dim)} {fmt(g2.hidden_dim)}")
+    click.echo(f"  {'Layers':22} {fmt(g1.num_layers)} {fmt(g2.num_layers)}")
+    click.echo(f"  {'Heads':22} {fmt(g1.num_heads)} {fmt(g2.num_heads)}")
+    click.echo(f"  {'KV heads':22} {fmt(g1.kv_heads)} {fmt(g2.kv_heads)}")
+    click.echo(f"  {'Head dim':22} {fmt(g1.head_dim)} {fmt(g2.head_dim)}")
+    click.echo(f"  {'Intermediate':22} {fmt(g1.intermediate_size)} {fmt(g2.intermediate_size)}")
+    click.echo(f"  {'Max context':22} {fmt(g1.max_position_embeddings)} {fmt(g2.max_position_embeddings)}")
+    click.echo(f"  {'Vocab':22} {fmt(g1.vocab_dim)} {fmt(g2.vocab_dim)}")
+    click.echo(f"  {'Family':22} {fmt(g1.arch_family.value)} {fmt(g2.arch_family.value)}")
+    click.echo(f"  {'RoPE':22} {fmt(str(g1.use_rope))} {fmt(str(g2.use_rope))}")
+    click.echo(f"  {'GQA':22} {fmt(str(g1.num_kv_heads > 0))} {fmt(str(g2.num_kv_heads > 0))}")
+    click.echo(f"  {'RMSNorm':22} {fmt(str(g1.use_rms_norm))} {fmt(str(g2.use_rms_norm))}")
+    click.echo(f"  {sep}")
+    click.echo(f"  {'VRAM (GB)':22} {fmt(round(c1.vram_gb, 2))} {fmt(round(c2.vram_gb, 2))}")
+    click.echo(f"  {'Train $/1K tok':22} {fmt(f'${c1.training_cost_per_1k_tokens:.2f}')} {fmt(f'${c2.training_cost_per_1k_tokens:.2f}')}")
+    click.echo(f"  {'Inference $/M tok':22} {fmt(f'${c1.inference_cost_per_1m_tokens:.2f}')} {fmt(f'${c2.inference_cost_per_1m_tokens:.2f}')}")
+    click.echo(f"  {'Latency (ms)':22} {fmt(round(c1.inference_latency_ms, 2))} {fmt(round(c2.inference_latency_ms, 2))}")
+    click.echo()
 
 
 @cli.command()
@@ -399,7 +515,7 @@ def bench():
     import torch
     
     gene = Gene()
-    from src.archgene.exporter import LLMArchitecture
+    from archgene.exporter import LLMArchitecture
     
     model = LLMArchitecture(gene)
     
@@ -443,9 +559,9 @@ def research(prompt, seed):
         python main.py research -p "long context 128k"
         python main.py research -p "low memory 1-bit"
     """
-    from src.archgene.research_engine import design_architecture_advanced
-    from src.archgene.gene_schema import Gene
-    from src.archgene.verifier import Verifier
+    from archgene.research_engine import design_architecture_advanced
+    from archgene.gene_schema import Gene
+    from archgene.verifier import Verifier
     
     console.print(Panel.fit(
         f"[bold cyan]Researching:[/bold cyan] {prompt}\n\n"
@@ -495,32 +611,81 @@ def research(prompt, seed):
 
 
 @cli.command()
-@click.option("--budget", "-b", default=100.0, help="Budget in GPU hours")
+@click.argument("prompt", default=None, required=False)
+@click.option("--budget", "-b", default=None, type=float, help="Budget in GPU hours (overrides prompt)")
 @click.option("--gpu", "-g", default="A100-40GB", help="GPU type")
-@click.option("--use-case", "-u", default="research", help="Use case: research, inference, fine-tuning")
+@click.option("--use-case", "-u", default=None, help="Use case: research, inference, fine-tuning (overrides prompt)")
 @click.option("--tokens", "-t", default=1_000_000_000, help="Training tokens")
-def recommend(budget, gpu, use_case, tokens):
-    """Recommend architectures based on budget and use case.
-    
+def recommend(prompt, budget, gpu, use_case, tokens):
+    """Recommend architectures based on requirements.
+
+    Provide a natural-language prompt for instant recommendations,
+    or use flags for explicit control.
+
     Examples:
-        python main.py recommend -b 50 -g A100-40GB -u research
-        python main.py recommend --budget 100 --use-case inference
+        archgene recommend "I need a 7B model for chat under $5K"
+        archgene recommend "efficient inference on edge device"
+        archgene recommend -b 50 -u inference           # flag-only mode
     """
+    from archgene.research_engine import TaskAnalyzer
+
+    # Parse natural language prompt if provided
+    if prompt:
+        import re
+        prompt_lower = prompt.lower()
+        req = TaskAnalyzer.analyze(prompt)
+
+        if budget is None:
+            budget = 500
+            budget_match = re.search(r'\$(\d+)[kK]?', prompt)
+            if budget_match:
+                val = int(budget_match.group(1))
+                budget = val * 1000 if 'k' in budget_match.group(0).lower() else val
+            elif re.search(r'\b(\d+)\s*gpu.?\s*hours?\b', prompt_lower):
+                budget = int(re.search(r'\b(\d+)\s*gpu.?\s*hours?\b', prompt_lower).group(1))
+            budget = max(budget, 10)
+
+        if use_case is None:
+            if re.search(r'\b(chat|conversation|dialog)\b', prompt_lower):
+                use_case = "inference"
+            elif re.search(r'\b(train|pretrain|from.scratch)\b', prompt_lower):
+                use_case = "research"
+            elif re.search(r'\b(fine.?tune|finetune|adapt|sft)\b', prompt_lower):
+                use_case = "finetuning"
+            elif re.search(r'\b(edge|mobile|phone|raspberry)\b', prompt_lower):
+                use_case = "inference"
+            else:
+                use_case = req.use_case
+
+        params_target = None
+        param_match = re.search(r'\b(\d+)\s*[bB]\b', prompt)
+        if param_match:
+            params_target = int(param_match.group(1)) * 1_000_000_000
+        param_match_m = re.search(r'\b(\d+)\s*[mM]\b', prompt)
+        if param_match_m:
+            params_target = int(param_match_m.group(1)) * 1_000_000
+
+        click.echo(f"\n  [{use_case} | budget=${budget:.0f} hrs{' | target=' + str(params_target) + ' params' if params_target else ''}]\n")
+
     candidates = []
-    
+
     for name in ModelZoo.list_all():
         gene = ModelZoo.get(name)
         est = CostEstimator.estimate_training(gene, gpu=gpu, training_tokens=tokens)
-        
+
+        if params_target and gene.compute_params() > params_target * 1.5:
+            continue
+        if params_target and gene.compute_params() < params_target * 0.2:
+            continue
         if est.training_hours <= budget * 1.5:
             score = 1.0
             if use_case == "research" and gene.num_layers >= 20:
                 score += 0.2
             if use_case == "inference" and gene.hidden_dim <= 2048:
                 score += 0.2
-            if use_case == "fine-tuning" and 3000 <= gene.hidden_dim <= 8000:
+            if use_case == "finetuning" and 3000 <= gene.hidden_dim <= 8000:
                 score += 0.3
-            
+
             candidates.append({
                 "name": name,
                 "score": score,
@@ -529,26 +694,39 @@ def recommend(budget, gpu, use_case, tokens):
                 "cost": est.training_hours * CostEstimator.GPU_COST_PER_HOUR.get(gpu, 2.0),
                 "params": gene.compute_params(),
             })
-    
+
     candidates.sort(key=lambda x: x["score"], reverse=True)
-    
-    console.print(Panel.fit(
-        f"[bold cyan]Recommendations for {use_case} on {gpu}[/bold cyan]\n\n"
-        f"Budget: {budget} hours | Tokens: {tokens:,}",
-        title="Architecture Recommendations",
-        border_style="cyan"
-    ))
-    
-    for i, c in enumerate(candidates[:5], 1):
+
+    if prompt:
+        # One-liner output for natural language mode
+        if not candidates:
+            click.echo(f"[yellow]Nothing fits within ${budget:.0f} GPU hours on {gpu}. Try a higher budget.[/yellow]")
+            return
+        best = candidates[0]
+        click.echo(f"  -> [green]{best['name']}[/green]  ({best['params']:,} params, {best['vram_gb']:.1f} GB VRAM, "
+                   f"~{best['training_hours']:.0f} hrs, ~${best['cost']:.0f})")
+        if len(candidates) > 1:
+            alt = candidates[1]
+            click.echo(f"     Alt: [blue]{alt['name']}[/blue] ({alt['params']:,} params, {alt['vram_gb']:.1f} GB)")
+    else:
+        # Full output for flag-only mode
         console.print(Panel.fit(
-            f"[bold]{i}. {c['name']}[/bold]\n"
-            f"    Score: {c['score']:.1f} | Params: {c['params']:,} | VRAM: {c['vram_gb']:.1f} GB\n"
-            f"    Training: {c['training_hours']:.0f} hours | Est. cost: ${c['cost']:.0f}",
-            border_style="green" if i == 1 else "blue"
+            f"[bold cyan]Recommendations for {use_case} on {gpu}[/bold cyan]\n\n"
+            f"Budget: {budget} hours | Tokens: {tokens:,}",
+            title="Architecture Recommendations",
+            border_style="cyan"
         ))
-    
-    if not candidates:
-        console.print("[yellow]No architectures fit within budget. Try increasing budget.[/yellow]")
+
+        for i, c in enumerate(candidates[:5], 1):
+            console.print(Panel.fit(
+                f"[bold]{i}. {c['name']}[/bold]\n"
+                f"    Score: {c['score']:.1f} | Params: {c['params']:,} | VRAM: {c['vram_gb']:.1f} GB\n"
+                f"    Training: {c['training_hours']:.0f} hours | Est. cost: ${c['cost']:.0f}",
+                border_style="green" if i == 1 else "blue"
+            ))
+
+        if not candidates:
+            console.print("[yellow]No architectures fit within budget. Try increasing budget.[/yellow]")
 
 
 @cli.command()
@@ -596,7 +774,7 @@ def zoo_evaluate(name):
 @click.option("--batch-size", default=1, help="Batch size")
 def cost(name, gpu, batch_size):
     """Estimate costs for an architecture."""
-    from src.archgene.gene_schema import QuantizationType
+    from archgene.gene_schema import QuantizationType
     
     gene = ModelZoo.get(name)
     est = CostEstimator.full_estimate(gene, gpu=gpu, batch_size=batch_size)

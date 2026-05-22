@@ -69,7 +69,9 @@ class EvaluationRecord:
 
 class EvaluationHistory:
     def __init__(self, path: Optional[str] = None):
-        self.path = Path(path) if path else Path("eval_history.json")
+        default_dir = Path.home() / ".archgene"
+        default_dir.mkdir(parents=True, exist_ok=True)
+        self.path = Path(path) if path else default_dir / "history.json"
         self.records: list[dict] = []
         self.load()
     
