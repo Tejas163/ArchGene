@@ -1,67 +1,18 @@
-# TODOS — Deferred Work
+# TODOS — Platform Progress
 
-## Phase 1 Complete ✓
+## Done (v0.4.0)
 
-- Gene schema ✓
-- Z3 verifier ✓
-- smolagents agents ✓
-- Benchmark suite ✓
+- Cleaned project — removed consulting bloat, unused modules, stale deps
+- `archgene design` — conversational Q&A architecture designer
+- `archgene generate` — runnable PyTorch code generation
+- Generation tracking for future free-tier limits
+- 21 tests passing
 
----
+## Next
 
-## Phase 2 In Progress
+- **Publish v0.4.0 to PyPI** — make the new features available
+- **Outreach** — Show HN, Reddit (r/MachineLearning, r/LocalLLaMA)
+- **Web UI** — simple browser-based design session
+- **Paid tiers** — limit free generations, charge for more
 
-### High Priority
-
-| Item | Status | Notes |
-|------|--------|-------|
-| Evaluation benchmarking suite | DONE ✓ | benchmark.py verified |
-| Production CI/CD pipeline | Pending | Not in Phase 1 scope |
-| Model export to ONNX | DONE ✓ | PyTorch export works |
-| Model export to HuggingFace | DONE ✓ | Config export works |
-
-### Medium Priority
-
-| Item | Status | Notes |
-|------|--------|-------|
-| LLM-guided generation | DONE ✓ | Using llama3.2:1b for reasoning |
-| Crossover operator | DONE ✓ | Fixed, tested |
-| Multi-objective optimization | DONE ✓ | Pareto optimization working |
-| Archive old agents/ | DONE ✓ | Archived to agents/legacy_backup/ |
-
-### Low Priority
-
-| Item | Status | Notes |
-|------|--------|-------|
-| Production CI/CD pipeline | Pending | Not in scope |
-| Web UI | DONE ✓ | Streamlit web_ui.py for visualization |
-| API server | DONE ✓ | REST API with auth, rate limit, CORS |
-| Model Zoo | Deferred | Pre-trained architectures library |
-| API server tests | DONE ✓ | pytest test_api.py (13 tests) |
-| Agent system tests | DONE ✓ | pytest test_agents.py (10 tests) |
-
----
-
-## Open Questions
-
-1. **Exact gene schema** — designed in Phase 1, may evolve
-2. **Simulation environment** — needs Implementor complete first
-3. **Ollama model selection** — could upgrade to 3B for better reasoning
-
----
-
-## Done
-
-- Project setup
-- Gene schema
-- Z3 verification layer
-- Evaluation API + scoring
-- Real-time progress tracking
-- Architecture visualization
-- Multiple export formats
-- History + persistence
-- Custom agents (legacy)
-- smolagents refactor
-- Benchmark suite
-
-Last updated: 2026-05-05
+Last updated: 2026-05-22

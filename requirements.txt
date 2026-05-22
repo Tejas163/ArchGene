@@ -1,12 +1,7 @@
-# Core dependencies
-z3-solver==4.16.0.0
-smolagents==1.24.0
-rich==14.3.3
-click==8.1.8
-fastapi==0.135.3
-uvicorn==0.42.0
+z3-solver
+torch
+rich
+click
+requests
 
-# Testing
-pytest==9.0.3
-pytest-asyncio==1.3.0
-pytest-cov==7.1.0
+pytest

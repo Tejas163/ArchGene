@@ -1,10 +1,31 @@
 [build]
-  command = "" # Static site - no build needed
+  command = ""
   publish = "."
-  functions = ""
 
-[build.environment]
-  PYTHON_VERSION = "3.12"
+[[redirects]]
+  from = "/services.html"
+  to = "/index.html"
+  status = 301
+
+[[redirects]]
+  from = "/blog.html"
+  to = "/index.html"
+  status = 301
+
+[[redirects]]
+  from = "/case-studies.html"
+  to = "/index.html"
+  status = 301
+
+[[redirects]]
+  from = "/blog/*"
+  to = "/index.html"
+  status = 301
+
+[[redirects]]
+  from = "/case-studies/*"
+  to = "/index.html"
+  status = 301
 
 [[redirects]]
   from = "/*"

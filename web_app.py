@@ -1,200 +1,228 @@
+"""ArchGene Web UI — Streamlit app for architecture design session."""
+
 import streamlit as st
-import pandas as pd
-from pathlib import Path
-import sys
 
-sys.path.insert(0, str(Path(__file__).parent))
-
-from src.archgene.gene_schema import Gene, ActivationType
-from src.archgene.model_zoo import ModelZoo
-from src.archgene.cost_estimator import CostEstimator
-from src.archgene.benchmark_integration import BenchmarkIntegration
-from src.archgene.verifier import Verifier
-
+try:
+    from archgene.design_session import design_from_answers
+    from archgene.kernel_generator import KernelGenerator
+except ImportError:
+    import sys
+    from pathlib import Path
+    sys.path.insert(0, str(Path(__file__).parent))
+    from src.archgene.design_session import design_from_answers
+    from src.archgene.kernel_generator import KernelGenerator
 
 st.set_page_config(
-    page_title="ArchGene - Find Your Architecture",
-    page_icon="🧬",
-    layout="wide"
+    page_title="ArchGene — Design LLM Architectures",
+    page_icon="",
+    layout="centered",
 )
 
-st.title("🧬 ArchGene - Find Your Architecture")
-st.markdown("**AI-powered architecture recommendations** based on your budget, GPU, and use case.")
+st.title("ArchGene Architecture Designer")
+st.markdown(
+    "Answer a few questions and get a **verified, cost-estimated, runnable** "
+    "LLM architecture — before you spend on training."
+)
 
+if "step" not in st.session_state:
+    st.session_state.step = 0
+    st.session_state.answers = {}
+    st.session_state.result = None
+    st.session_state.gene = None
 
-def recommend_architecture(
-    budget_hours: float,
-    gpu: str,
-    use_case: str,
-    dataset_size: int = 1_000_000_000,
-) -> list:
-    """Recommend architectures based on constraints."""
-    candidates = []
-    
-    for name in ModelZoo.list_all():
-        gene = ModelZoo.get(name)
-        est = CostEstimator.estimate_training(gene, gpu=gpu, training_tokens=dataset_size)
-        
-        if est.training_hours <= budget_hours * 1.5:
-            score = 1.0
-            if use_case == "research" and gene.num_layers >= 20:
-                score += 0.2
-            if use_case == "inference" and gene.hidden_dim <= 2048:
-                score += 0.2
-            if use_case == "fine-tuning" and 3000 <= gene.hidden_dim <= 8000:
-                score += 0.3
-                
-            candidates.append({
-                "name": name,
-                "score": score,
-                "training_hours": est.training_hours,
-                "vram_gb": est.vram_gb,
-                "cost": est.training_hours * CostEstimator.GPU_COST_PER_HOUR.get(gpu, 2.0),
-                "params": gene.compute_params(),
-            })
-    
-    candidates.sort(key=lambda x: x["score"], reverse=True)
-    return candidates[:5]
+USE_CASES = {
+    "Research / experimentation": "research",
+    "Production inference": "inference",
+    "Fine-tuning existing models": "finetuning",
+    "Edge / mobile deployment": "edge",
+}
+BUDGET_TIERS = {
+    "Free / low (<$100) — hobby": "free",
+    "Mid ($100–$1K) — serious fine-tuning": "mid",
+    "High ($1K–$10K) — production training": "high",
+    "Enterprise ($10K+) — large-scale": "enterprise",
+}
+ARCH_FAMILIES = {
+    "Transformer (proven, general-purpose)": "transformer",
+    "Mixture of Experts (efficient scaling)": "moe",
+    "Linear / State Space (long context)": "linear",
+    "Any — pick the best for my needs": "any",
+}
+PARAM_RANGES = {
+    "<1B — lightweight, fast": "under1b",
+    "1B–7B — balanced": "1b-7b",
+    "7B–30B — capable, higher cost": "7b-30b",
+    "30B+ — maximum capability": "30b+",
+    "Not sure — let the system decide": "auto",
+}
+CONTEXT_LENGTHS = {
+    "2K (standard)": 2048,
+    "8K (recommended)": 8192,
+    "32K (long documents)": 32768,
+    "128K+ (very long context)": 131072,
+}
+CONSTRAINT_OPTIONS = {
+    "Long context (>32K tokens)": "long_context",
+    "Low latency (<50ms per token)": "low_latency",
+    "Low memory (<8GB VRAM)": "low_memory",
+    "Quantization support": "quantized",
+}
 
+questions = [
+    {
+        "title": "What's your primary use case?",
+        "key": "use_case",
+        "type": "radio",
+        "options": list(USE_CASES.keys()),
+        "help": "This determines priority (efficiency vs capability) and device targets.",
+    },
+    {
+        "title": "What's your budget range?",
+        "key": "budget_tier",
+        "type": "radio",
+        "options": list(BUDGET_TIERS.keys()),
+        "help": "Budget sets limits on GPU hours, parameter count, and memory.",
+    },
+    {
+        "title": "Any specific constraints?",
+        "key": "constraints",
+        "type": "multiselect",
+        "options": list(CONSTRAINT_OPTIONS.keys()),
+        "help": "These reshape the architecture (e.g., long context → higher RoPE base freq).",
+    },
+    {
+        "title": "Preferred architecture family?",
+        "key": "arch_family",
+        "type": "radio",
+        "options": list(ARCH_FAMILIES.keys()),
+        "help": "Transformer is proven. MoE scales efficiently. Linear models handle very long context.",
+    },
+    {
+        "title": "Target parameter count?",
+        "key": "target_params",
+        "type": "radio",
+        "options": list(PARAM_RANGES.keys()),
+        "help": "More parameters → more capability but higher cost.",
+    },
+    {
+        "title": "Maximum context length?",
+        "key": "context_length",
+        "type": "radio",
+        "options": list(CONTEXT_LENGTHS.keys()),
+        "help": "Longer context needs more memory and influences architecture choices.",
+    },
+]
 
-col1, col2 = st.columns([1, 2])
+if st.session_state.step < len(questions):
+    q = questions[st.session_state.step]
+    with st.container():
+        st.subheader(f"Question {st.session_state.step + 1} of {len(questions)}")
+        st.caption(q.get("help", ""))
 
-with col1:
-    st.header("🎯 Your Requirements")
-    
-    use_case = st.selectbox(
-        "What's your use case?",
-        ["fine-tuning", "inference", "research", "experimentation"],
-        index=0
+        if q["type"] == "radio":
+            choice = st.radio(
+                q["title"],
+                q["options"],
+                key=f"q_{st.session_state.step}",
+                index=None,
+            )
+        elif q["type"] == "multiselect":
+            choice = st.multiselect(
+                q["title"],
+                q["options"],
+                key=f"q_{st.session_state.step}",
+            )
+
+        col1, col2 = st.columns([1, 4])
+        with col1:
+            if st.button("Back", disabled=st.session_state.step == 0):
+                st.session_state.step -= 1
+                st.rerun()
+        with col2:
+            disabled = not choice if q["type"] != "multiselect" else False
+            if st.button("Next", disabled=disabled, type="primary"):
+                st.session_state.answers[q["key"]] = choice
+                st.session_state.step += 1
+                st.rerun()
+
+elif st.session_state.step == len(questions):
+    with st.spinner("Designing your architecture..."):
+        answers = st.session_state.answers
+        mapped = {
+            "use_case": USE_CASES.get(answers.get("use_case", ""), "research"),
+            "budget_tier": BUDGET_TIERS.get(answers.get("budget_tier", ""), "mid"),
+            "arch_family": ARCH_FAMILIES.get(answers.get("arch_family", ""), "any"),
+            "target_params": PARAM_RANGES.get(answers.get("target_params", ""), "1b-7b"),
+            "context_length": CONTEXT_LENGTHS.get(answers.get("context_length", ""), 8192),
+        }
+        raw_constraints = answers.get("constraints", [])
+        mapped["constraints"] = [CONSTRAINT_OPTIONS[c] for c in raw_constraints if c in CONSTRAINT_OPTIONS]
+
+        result = design_from_answers(**mapped)
+        st.session_state.result = result
+        st.session_state.gene = result["gene"]
+        st.session_state.step += 1
+    st.rerun()
+
+elif st.session_state.step == len(questions) + 1:
+    r = st.session_state.result
+    gene = st.session_state.gene
+
+    st.success("**Architecture design complete!**")
+
+    valid = r["verified"]
+    status_icon = "" if valid else ""
+    st.metric("Z3 Verification", f"{status_icon} {'PASS' if valid else 'FAIL'}")
+    cols = st.columns(3)
+    cols[0].metric("Hidden Dim", gene.hidden_dim)
+    cols[0].metric("Layers", gene.num_layers)
+    cols[1].metric("Attention Heads", gene.num_heads)
+    cols[1].metric("KV Heads", gene.kv_heads)
+    cols[2].metric("Parameters", f"{r['params']:,}")
+    cols[2].metric("VRAM", f"{r['vram_gb']:.1f} GB")
+
+    st.subheader("Cost Estimates")
+    cost_cols = st.columns(3)
+    cost_cols[0].metric("Training", f"{r['training_hours']:.0f} GPU hrs")
+    cost_cols[1].metric("Train Cost", f"${r['training_cost_per_1k']:.2f}/1K tok")
+    cost_cols[2].metric("Inference", f"${r['inference_cost_per_1m']:.2f}/M tok")
+
+    st.subheader("Architecture Details")
+    st.code(
+        f"Family: {r['arch_family']}\n"
+        f"Use case: {r['use_case']}\n"
+        f"Budget: {r['budget_tier']}\n"
+        f"Context length: {r['context_length']:,}\n"
+        f"Latency: {r['latency_ms']:.2f} ms/token\n"
+        f"Score: {r['score']:.2f}",
+        language="text",
     )
-    
-    budget = st.number_input(
-        "Budget ($)",
-        min_value=10,
-        max_value=10000,
-        value=100,
-        step=10,
-        help="How much can you spend on training?"
+
+    if "constraints" in r and r["constraints"]:
+        st.caption(f"Applied constraints: {', '.join(r['constraints'])}")
+
+    st.subheader("Generated Code")
+    st.markdown(
+        "Download a runnable PyTorch package with RoPE, GQA, SwiGLU, and RMSNorm:"
     )
-    
-    gpu = st.selectbox(
-        "GPU Available",
-        ["A100-40GB", "A100-80GB", "H100", "A10", "T4", "L40"],
-        index=0
+    zip_bytes = KernelGenerator.generate_zip(gene)
+    st.download_button(
+        label="Download archgene_generated.zip",
+        data=zip_bytes,
+        file_name="archgene_generated.zip",
+        mime="application/zip",
+        type="primary",
     )
-    
-    dataset_tokens = st.number_input(
-        "Dataset size (tokens)",
-        min_value=1_000_000,
-        value=1_000_000_000,
-        step=1_000_000_000,
-        format="%d",
-        help="How many training tokens?"
-    )
-    
-    st.header("⚙️ Preferences")
-    
-    prefer_rope = st.checkbox("Prefer RoPE embeddings", value=True)
-    prefer_flash = st.checkbox("Prefer Flash Attention", value=True)
-    
-    min_params = st.slider("Min parameters (M)", 0, 70, 0)
-    max_params = st.slider("Max parameters (M)", 0, 70, 70)
 
-with col2:
-    st.header("📋 Recommendations")
-    
-    if st.button("🔍 Find My Architecture", type="primary"):
-        budget_hours = budget / CostEstimator.GPU_COST_PER_HOUR.get(gpu, 2.0)
-        
-        candidates = recommend_architecture(budget_hours, gpu, use_case, dataset_tokens)
-        
-        if prefer_rope or prefer_flash:
-            filtered = []
-            for c in candidates:
-                gene = ModelZoo.get(c["name"])
-                if prefer_rope and not gene.use_rope:
-                    continue
-                if prefer_flash and not gene.use_flash_attention:
-                    continue
-                filtered.append(c)
-            candidates = filtered
-        
-        if min_params > 0 or max_params < 70:
-            filtered = []
-            for c in candidates:
-                params_m = c["params"] / 1e6
-                if min_params <= params_m <= max_params:
-                    filtered.append(c)
-            candidates = filtered
-        
-        if candidates:
-            for i, c in enumerate(candidates):
-                gene = ModelZoo.get(c["name"])
-                est = CostEstimator.full_estimate(gene, gpu=gpu)
-                bench = BenchmarkIntegration.estimate_mmlu(gene)
-                
-                with st.expander(f"#{i+1} {c['name'].upper()} - Score: {c['score']:.1f}", expanded=i==0):
-                    col_a, col_b = st.columns(2)
-                    
-                    with col_a:
-                        st.metric("Parameters", f"{c['params']/1e6:.1f}M")
-                        st.metric("VRAM", f"{c['vram_gb']:.1f} GB")
-                        st.metric("Training Cost", f"${c['cost']:.0f}")
-                    
-                    with col_b:
-                        st.metric("Training Time", f"{c['training_hours']:.0f} hours")
-                        st.metric("MMLU Est.", f"{bench.mmlu:.1%}")
-                        st.metric("/hour", f"${CostEstimator.GPU_COST_PER_HOUR.get(gpu, 2.0)}")
-                    
-                    if use_case == "fine-tuning":
-                        st.success("💡 Best for fine-tuning! LowerVRAM means you can use larger batches.")
-                    elif use_case == "inference":
-                        st.success("💡 Best for inference! Good throughput on your GPU.")
-                    else:
-                        st.success("💡 Best for research! Good balance of capability and cost.")
-                        
-                    st.caption(f"Hidden: {gene.hidden_dim}, Layers: {gene.num_layers}, Heads: {gene.num_heads}")
-        else:
-            st.warning("No architectures match your criteria. Try adjusting budget or GPU.")
+    with st.expander("Preview model.py"):
+        files = KernelGenerator.generate_files_dict(gene)
+        st.code(files.get("model.py", ""), language="python")
+    with st.expander("Preview train.py"):
+        st.code(files.get("train.py", ""), language="python")
+    with st.expander("Preview config.json"):
+        st.code(files.get("config.json", ""), language="json")
 
-
-st.divider()
-
-st.header("📊 Model Zoo Overview")
-
-zoo_df = []
-for name in ModelZoo.list_all():
-    gene = ModelZoo.get(name)
-    est = CostEstimator.full_estimate(gene, gpu="A100-40GB")
-    zoo_df.append({
-        "Name": name,
-        "Params": f"{gene.compute_params()/1e6:.1f}M",
-        "VRAM": f"{est.vram_gb:.1f}GB",
-        "Training": f"{est.training_hours:.0f}h",
-        "Cost": f"${est.training_hours * 2:.0f}",
-    })
-
-if zoo_df:
-    st.dataframe(pd.DataFrame(zoo_df), use_container_width=True)
-
-
-with st.sidebar:
-    st.header("About")
-    st.markdown("""
-    **ArchGene** helps you find the right LLM architecture for your budget and use case.
-    
-    Just input:
-    - Your budget
-    - Available GPU
-    - Use case
-    
-    Get architecture recommendations with real cost estimates.
-    """)
-    
-    st.header("Quick Links")
-    st.link("CLI Documentation", "/main.py")
-    st.link("GitHub", "https://github.com/Tejas163/ArchGene")
-
-
-if __name__ == "__main__":
-    pass
+    if st.button("Start over — design another architecture"):
+        for key in list(st.session_state.keys()):
+            del st.session_state[key]
+        st.rerun()

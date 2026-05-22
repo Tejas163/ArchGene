@@ -6,10 +6,6 @@ from rich.panel import Panel
 from rich.prompt import Prompt
 from rich.table import Table
 from rich.progress import Progress, SpinnerColumn, TextColumn
-import sys
-from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from .gene_schema import Gene, ActivationType
 from .evaluation import Evaluator
@@ -472,7 +468,7 @@ def path_research():
     console.print(f"\n[bold green]Analyzing: {prompt}[/bold green]")
     console.print("[dim]This may take a moment...[/dim]\n")
     
-    from research_engine import design_architecture_advanced
+    from .research_engine import design_architecture_advanced
     
     result = design_architecture_advanced(prompt)
     gene_dict = result["gene"]

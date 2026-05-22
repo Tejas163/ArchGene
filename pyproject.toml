@@ -4,18 +4,19 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "archgene"
-version = "0.3.0"
-description = "Self-healing multi-agent cognitive architecture evaluation system"
+version = "0.4.0"
+description = "Verify your LLM architecture before you waste compute — formal verification, cost estimation, and benchmark projections"
 requires-python = ">=3.10"
 dependencies = [
     "z3-solver",
-    "smolagents",
+    "torch",
     "rich",
     "click",
-    "fastapi",
-    "uvicorn",
-    "streamlit",
+    "requests",
 ]
+
+[project.optional-dependencies]
+web = ["streamlit"]
 
 [project.scripts]
 archgene = "cli.main:cli"

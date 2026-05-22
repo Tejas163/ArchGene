@@ -11,7 +11,7 @@ This module provides:
 from dataclasses import dataclass
 from typing import Optional
 import re
-from src.archgene.gene_schema import Gene, ActivationType, ArchitectureFamily, QuantizationType
+from .gene_schema import Gene, ActivationType, ArchitectureFamily, QuantizationType
 
 
 @dataclass

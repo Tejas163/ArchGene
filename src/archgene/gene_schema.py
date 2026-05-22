@@ -67,6 +67,7 @@ class Gene:
     dropout: float = 0.0
     use_rope: bool = True
     use_gated_activation: bool = False
+    num_kv_heads: int = 0  # 0 means same as num_heads (MHA)
     
     arch_family: ArchitectureFamily = ArchitectureFamily.TRANSFORMER
     quant_type: QuantizationType = QuantizationType.NONE
@@ -79,6 +80,10 @@ class Gene:
     rwkv_time_mix: bool = True
     rwkv_layer_norm: bool = True
     rwkv_sigmoid_softcap: float = 0.0
+
+    @property
+    def kv_heads(self) -> int:
+        return self.num_kv_heads if self.num_kv_heads > 0 else self.num_heads
 
     def to_dict(self) -> dict:
         return {
@@ -102,6 +107,7 @@ class Gene:
             "dropout": self.dropout,
             "use_rope": self.use_rope,
             "use_gated_activation": self.use_gated_activation,
+            "num_kv_heads": self.num_kv_heads,
             "arch_family": self.arch_family.value,
             "quant_type": self.quant_type.value,
             "quant_groupsize": self.quant_groupsize,
@@ -142,6 +148,7 @@ class Gene:
             dropout=d.get("dropout", 0.0),
             use_rope=d.get("use_rope", True),
             use_gated_activation=d.get("use_gated_activation", False),
+            num_kv_heads=d.get("num_kv_heads", 0),
             arch_family=arch_family,
             quant_type=quant_type,
             quant_groupsize=d.get("quant_groupsize", 128),

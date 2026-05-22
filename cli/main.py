@@ -18,7 +18,7 @@ warnings.filterwarnings("ignore", category=DeprecationWarning)
 if sys.platform == "win32":
     os.environ["PYTHONIOENCODING"] = "utf-8"
 
-__version__ = "0.2.0"
+__version__ = "0.4.0"
 
 from src.archgene.gene_schema import Gene, ActivationType
 from src.archgene.verifier import Verifier
@@ -31,6 +31,8 @@ from src.archgene.cost_estimator import CostEstimator
 from src.archgene.benchmark_integration import BenchmarkIntegration
 from src.archgene.deployment import ModelDeployment
 from src.archgene.interactive_guide import run_guide
+from src.archgene.design_session import DesignSession
+from src.archgene.kernel_generator import KernelGenerator
 
 
 console = Console()
@@ -71,6 +73,20 @@ def cli():
         python main.py recommend           # AI-powered recommendation
     """
     pass
+
+
+def _offer_code_generation(gene):
+    """Ask user if they want to generate code for the designed architecture."""
+    from rich.prompt import Confirm
+    if Confirm.ask("\nGenerate runnable PyTorch code for this architecture?"):
+        from src.archgene.kernel_generator import KernelGenerator
+        gen = KernelGenerator()
+        files = gen.generate(gene)
+        console.print(f"\n[green]Generated {files.output_dir}/[/green]")
+        for f in [files.model_py, files.config_json, files.train_py, files.requirements_txt]:
+            size = f.stat().st_size
+            console.print(f"  [cyan]{f.name}[/cyan] ({size:,} bytes)")
+        console.print(f"\n[dim]Run: cd generated && python train.py[/dim]")
 
 
 @cli.command()
@@ -407,63 +423,7 @@ def bench():
     click.echo(f"Tokens/sec: {seq_len / per_iter:.0f}")
 
 
-@cli.command()
-@click.option("--generations", "-g", default=10, help="Number of generations")
-@click.option("--population", "-p", default=10, help="Population size")
-@click.option("--objectives", "-o", default="capability,efficiency,memory", help="Objectives to optimize")
-def evolve(generations, population, objectives):
-    """Evolve novel architectures using genetic algorithm.
-    
-    Examples:
-        python main.py evolve                         # Quick evolution
-        python main.py evolve -g 50 -p 20            # Full evolution
-        python main.py evolve -o capability,efficiency  # Multi-objective
-    """
-    import sys
-    from pathlib import Path
-    sys.path.insert(0, str(Path(__file__).parent))
-    
-    from multi_objective import run_multi_objective_evolution, compute_multi_objective_fitness
-    from src.archgene.gene_schema import Gene
-    
-    obj_list = objectives.split(",")
-    
-    console.print(Panel.fit(
-        f"[bold cyan]Starting evolution...[/bold cyan]\n\n"
-        f"  Generations: {generations}\n"
-        f"  Population: {population}\n"
-        f"  Objectives: {objectives}",
-        title="Evolution Run",
-        border_style="cyan"
-    ))
-    
-    result = run_multi_objective_evolution(
-        population_size=population,
-        generations=generations,
-        verbose=True
-    )
-    
-    if result["best_gene"]:
-        gene = Gene.from_dict(result["best_gene"])
-        f = result["best_fitness"]
-        
-        console.print(Panel.fit(
-            f"[bold green]Best Architecture Found![/bold green]\n\n"
-            f"  Parameters: {gene.compute_params():,}\n"
-            f"  Memory: {gene.compute_memory() / 1e6:.1f} MB\n\n"
-            f"[bold]Fitness:[/bold]\n"
-            f"  Capability: {f.capability:.2f}\n"
-            f"  Efficiency: {f.efficiency:.2f}\n"
-            f"  Stability: {f.stability:.2f}\n"
-            f"  Memory Fit: {f.memory_fit:.2f}\n\n"
-            f"[bold]Gene:[/bold]\n"
-            f"  hidden_dim={gene.hidden_dim}, num_layers={gene.num_layers}\n"
-            f"  num_heads={gene.num_heads}, intermediate_size={gene.intermediate_size}",
-            title="Results",
-            border_style="green"
-        ))
-    
-    console.print("\n[dim]Run 'python main.py save' to record this evaluation.[/dim]")
+
 
 
 @cli.command()
@@ -483,11 +443,7 @@ def research(prompt, seed):
         python main.py research -p "long context 128k"
         python main.py research -p "low memory 1-bit"
     """
-    import sys
-    from pathlib import Path
-    sys.path.insert(0, str(Path(__file__).parent))
-    
-    from research_engine import design_architecture_advanced
+    from src.archgene.research_engine import design_architecture_advanced
     from src.archgene.gene_schema import Gene
     from src.archgene.verifier import Verifier
     
@@ -757,6 +713,71 @@ def handle_error(error):
         ))
     
     sys.exit(1)
+
+
+@cli.command()
+def design():
+    """Design an architecture through conversational Q&A.
+    
+    Answer a few questions about your use case, budget, and constraints,
+    and ArchGene will design a verified architecture tailored to your needs.
+    
+    Examples:
+        python main.py design
+    """
+    session = DesignSession()
+    gene = session.run()
+    if gene:
+        _offer_code_generation(gene)
+
+
+@cli.command()
+@click.option("--hidden-dim", "-d", default=512, help="Hidden dimension")
+@click.option("--num-layers", "-l", default=4, help="Number of layers")
+@click.option("--num-heads", "-n", default=8, help="Number of attention heads")
+@click.option("--head-dim", default=64, help="Head dimension")
+@click.option("--intermediate-size", "-i", default=2048, help="FFN intermediate size")
+@click.option("--vocab-dim", "-v", default=4096, help="Vocabulary size")
+@click.option("--max-pos", "-m", default=2048, help="Max position embeddings")
+@click.option("--output", "-o", default="generated", help="Output directory")
+def generate(hidden_dim, num_layers, num_heads, head_dim, intermediate_size, vocab_dim, max_pos, output):
+    """Generate runnable PyTorch source code from an architecture.
+
+    Produces model.py, config.json, train.py, and requirements.txt
+    in the specified output directory.
+
+    Examples:
+        python main.py generate -d 4096 -l 32 -n 16
+        python main.py generate -d 768 -l 12 -n 12 -i 3072 -o my_model
+    """
+    gene = Gene(
+        vocab_dim=vocab_dim,
+        hidden_dim=hidden_dim,
+        num_layers=num_layers,
+        num_heads=num_heads,
+        head_dim=head_dim,
+        intermediate_size=intermediate_size,
+        max_position_embeddings=max_pos,
+    )
+
+    verifier = Verifier()
+    result = verifier.verify_all(gene)
+    if not result.is_valid:
+        console.print("[red]Architecture verification failed:[/red]")
+        for err in result.errors:
+            console.print(f"  - {err}")
+        return
+
+    gen = KernelGenerator()
+    files = gen.generate(gene, output)
+
+    console.print(f"\n[green]Generated {output}/[/green]")
+    for f in [files.model_py, files.config_json, files.train_py, files.requirements_txt]:
+        size = f.stat().st_size
+        console.print(f"  [cyan]{f.name}[/cyan] ({size:,} bytes)")
+
+    console.print(f"\n[dim]Run: cd {output} && python train.py[/dim]")
+    console.print(f"[dim]Model: {gene.compute_params():,} params | hidden={gene.hidden_dim} layers={gene.num_layers} heads={gene.num_heads}[/dim]")
 
 
 @cli.command()

@@ -30,6 +30,8 @@ ArchGene prevents this.
 | **Cost Estimation** | "This will cost $12K to train on 8x A100s" |
 | **Benchmark Projections** | "Expected MMLU score: ~42%" |
 | **Model Zoo** | Compare against GPT-2, Llama-2, Mistral, etc. |
+| **Design Session** | Conversational Q&A that designs a verified architecture for your use case |
+| **Kernel Generation** | Generates runnable PyTorch model.py, config.json, and train.py |
 
 ## Quick Start
 
@@ -73,6 +75,12 @@ archgene zoo-list
 
 # Benchmark estimate
 archgene benchmark llama2_7b
+
+# Design an architecture through conversational Q&A
+archgene design
+
+# Generate runnable PyTorch code from a design
+archgene generate -d 4096 -l 32 -n 16 -i 11008
 ```
 
 ## Architecture Parameters
