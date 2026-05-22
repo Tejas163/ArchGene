@@ -2,6 +2,7 @@
   command = ""
   publish = "."
 
+# Legacy page redirects (old pages that no longer exist)
 [[redirects]]
   from = "/services.html"
   to = "/index.html"
@@ -9,7 +10,7 @@
 
 [[redirects]]
   from = "/blog.html"
-  to = "/index.html"
+  to = "/blog/"
   status = 301
 
 [[redirects]]
@@ -18,16 +19,6 @@
   status = 301
 
 [[redirects]]
-  from = "/blog/*"
-  to = "/index.html"
-  status = 301
-
-[[redirects]]
   from = "/case-studies/*"
   to = "/index.html"
   status = 301
-
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
