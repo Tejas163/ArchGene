@@ -18,7 +18,7 @@ warnings.filterwarnings("ignore", category=DeprecationWarning)
 if sys.platform == "win32":
     os.environ["PYTHONIOENCODING"] = "utf-8"
 
-__version__ = "0.4.0"
+__version__ = "0.4.1"
 
 from src.archgene.gene_schema import Gene, ActivationType
 from src.archgene.verifier import Verifier

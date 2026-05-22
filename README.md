@@ -39,14 +39,20 @@ ArchGene prevents this.
 # Install
 pip install archgene
 
+# Design an architecture through conversational Q&A
+archgene design
+
 # Verify your architecture BEFORE training
-python -m archgene verify --hidden 4096 --heads 32 --layers 24
+archgene verify --hidden 4096 --heads 32 --layers 24
+
+# Generate runnable PyTorch code
+archgene generate --session 0
 
 # Get cost estimate
-python -m archgene cost --model gpt2 --gpu A100
+archgene cost gpt2 --gpu A100
 
 # Check against known architectures
-python -m archgene zoo-evaluate llama2_7b
+archgene zoo-evaluate llama2_7b
 ```
 
 ## Why This Matters
@@ -106,8 +112,8 @@ archgene generate -d 4096 -l 32 -n 16 -i 11008
 
 - Python 3.12+
 - Z3 theorem prover (formal verification)
-- FastAPI (optional REST API)
-- Streamlit (optional web UI)
+- PyTorch (code generation)
+- Streamlit (optional web UI: `pip install archgene[web]`)
 
 ## Links
 

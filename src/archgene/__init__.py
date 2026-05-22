@@ -1,6 +1,6 @@
 """Verify your LLM architecture before you waste compute."""
 
-__version__ = "0.4.0"
+__version__ = "0.4.1"
 
 from .gene_schema import Gene, ActivationType, AttentionType, PoolingType, ArchitectureFamily, QuantizationType
 from .verifier import Verifier, VerificationResult
